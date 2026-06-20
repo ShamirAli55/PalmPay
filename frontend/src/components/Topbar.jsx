@@ -1,14 +1,22 @@
 import { useUser, UserButton } from "@clerk/clerk-react";
-import { Bell, Sun, Moon } from "lucide-react";
+import { Bell, Sun, Moon, Menu } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import { dark } from "@clerk/themes";
 
 export default function Topbar() {
   const { user } = useUser();
-  const { isDark, toggleTheme } = useWalletStore();
+  const { isDark, toggleTheme, toggleSidebar } = useWalletStore();
 
   return (
     <header className="h-[80px] flex items-center justify-between px-6 sm:px-10 bg-bg-main border-b border-border-main relative">
+      {/* Mobile Menu Button */}
+      <button 
+        onClick={toggleSidebar}
+        className="lg:hidden p-2.5 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95"
+      >
+        <Menu size={20} />
+      </button>
+
       {/* Center heading removed */}
 
       {/* Right Side */}

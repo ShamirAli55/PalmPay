@@ -109,8 +109,7 @@ h1, h2, h3, h4, .font-heading {
 .cl-internal-df68v5,
 [data-clerk-brand],
 .cl-userButtonPopoverFooter,
-.cl-internal-b3fm6y,
-.cl-userButtonPopoverActions {
+.cl-internal-b3fm6y {
   display: none !important;
   height: 0 !important;
   padding: 0 !important;

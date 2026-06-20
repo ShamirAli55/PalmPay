@@ -1,245 +1,170 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  CreditCard, 
-  ArrowLeft, 
-  Plus, 
-  Smartphone, 
-  CheckCircle2, 
-  AlertCircle,
-  Shield
-} from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
+import { useUser } from "@clerk/clerk-react";
+import { Shield, ChevronRight, CheckCircle2, History, Loader2, Building2, Smartphone } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import PalmScanner from "../components/ui/PalmScanner";
+import { CONNECTED_BANKS } from "../constants/index";
 
-// Initialize Stripe outside of component
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const QUICK_AMOUNTS = [500, 1000, 5000, 10000];
 
-const QUICK_AMOUNTS = [
-  { label: "Rs. 500", value: 500 },
-  { label: "Rs. 1,000", value: 1000 },
-  { label: "Rs. 5,000", value: 5000 },
-];
+export default function AddMoney() {
+  const { user } = useUser();
+  const { balance, addFunds, loading } = useWalletStore();
+  const [selectedSource, setSelectedSource] = useState(CONNECTED_BANKS[0].id);
+  const [amount, setAmount] = useState("500.00");
+  const [success, setSuccess] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const navigate = useNavigate();
 
-const METHODS = [
-  { id: "card", label: "Credit / Debit Card", icon: CreditCard, color: "#3b82f6" },
-  { id: "easypaisa", label: "Easypaisa", icon: Smartphone, color: "#22c55e" },
-  { id: "jazzcash", label: "JazzCash", icon: Smartphone, color: "#f59e0b" },
-];
+  const handleAmountChange = (val) => {
+    const cleaned = val.replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".");
+    if (parts.length > 2) return;
+    if (parts[1] && parts[1].length > 2) return;
+    setAmount(cleaned);
+  };
 
-function CheckoutForm({ amount, onBalanceAdd, onPalmRequired }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-
-    setLoading(true);
-    setError(null);
-
-    const cardElement = elements.getElement(CardElement);
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-    });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
+  const handleAmountBlur = () => {
+    const num = parseFloat(amount);
+    if (!isNaN(num)) {
+      setAmount(num.toFixed(2));
     } else {
-      setLoading(false);
-      onPalmRequired();
+      setAmount("500.00");
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="mt-6">
-      <div className="bg-white/4 border border-white/10 rounded-xl p-4 mb-5">
-        <CardElement options={{
-          style: {
-            base: {
-              fontSize: '16px',
-              color: '#ffffff',
-              '::placeholder': { color: 'rgba(255,255,255,0.3)' },
-            },
-            invalid: { color: '#ef4444' },
-          },
-        }} />
-      </div>
-
-      {error && (
-        <div className="text-red-500 text-xs mb-4 flex items-center gap-1.5 font-semibold">
-          <AlertCircle size={14} /> {error}
-        </div>
-      )}
-
-      <button
-        disabled={!stripe || loading}
-        className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl text-white text-[15px] font-bold transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-      >
-        {loading ? "Verifying Card..." : `Authorize Rs. ${amount}`}
-      </button>
-      <p className="text-[10px] text-white/30 text-center mt-3 font-medium uppercase tracking-wider">
-        Final authentication via Palm-ID™ will follow
-      </p>
-    </form>
-  );
-}
-
-export default function AddMoney() {
-  const navigate = useNavigate();
-  const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("card");
-  const addFunds = useWalletStore((state) => state.addFunds);
-
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [localLoading, setLocalLoading] = useState(false);
-  const [localSuccess, setLocalSuccess] = useState(false);
-
-  const handleAuthorize = () => {
-    if (!amount || parseInt(amount) <= 0) return;
+  const handleDepositRequest = () => {
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount < 100) return;
     setIsScannerOpen(true);
   };
 
-  const onScanVerified = () => {
-    setLocalLoading(true);
-    setTimeout(() => {
-       addFunds(amount);
-       setLocalLoading(false);
-       setLocalSuccess(true);
-    }, 800);
+  const onScanVerified = async (palmImageBlob) => {
+    const numAmount = parseFloat(amount);
+    const sourceBank = CONNECTED_BANKS.find(b => b.id === selectedSource)?.name || 'External Bank';
+    
+    const result = await addFunds(user.id, {
+        amount: numAmount,
+        source: sourceBank
+    }, palmImageBlob);
+
+    if (result) setSuccess(true);
   };
 
-  if (localSuccess) {
-    return (
-      <div className="max-w-[640px] mx-auto py-10 px-4">
-        <div className="bg-[#0d1424] border border-white/8 rounded-2xl p-8 text-center shadow-xl">
-          <CheckCircle2 size={64} className="text-green-500 mx-auto mb-4" />
-          <h2 className="text-white text-2xl font-bold mb-2">Top-up Successful!</h2>
-          <p className="text-white/40 text-sm mt-2 mb-6">
-            Rs. {amount} has been added to your Digital Palm wallet balance.
-          </p>
-          <button 
-            onClick={() => navigate("/dashboard")}
-            className="w-full py-3.5 bg-white/5 border border-white/10 rounded-xl text-white font-semibold hover:bg-white/10 transition-all"
-          >
-            Go to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-[640px] mx-auto py-2.5 px-4">
-      <button 
-        onClick={() => navigate(-1)}
-        className="bg-white/5 border-none rounded-lg px-3 py-2 text-white/60 cursor-pointer flex items-center gap-1.5 mb-5 text-[13px] hover:text-white"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+    <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen max-w-4xl mx-auto">
+      {/* Header telemetry */}
+      <div className="flex items-center justify-between px-2">
+         <div className="flex items-center gap-2.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse shadow-[0_0_8px_var(--accent-blue)]" />
+            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Inbound Synthesis Protocol</span>
+         </div>
+         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30">V-AUTH v2.1</span>
+      </div>
 
-      <div className="bg-[#0d1424] border border-white/8 rounded-2xl p-8 backdrop-blur-2xl shadow-2xl">
-        <h1 className="text-[26px] font-extrabold text-white leading-tight mb-2 m-0 tracking-tight">
-          Top Up Wallet
-        </h1>
-        <p className="text-sm text-white/40 mb-8 font-medium">
-          Securely add funds via Palm-ID™ Biometric Verification
-        </p>
-
-        {/* Amount Input */}
-        <div className="mb-8">
-          <label className="text-[11px] font-bold text-white/30 tracking-widest mb-3 block uppercase">
-            ENTER AMOUNT (PKR)
-          </label>
-          <div className="relative mt-3">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-white/20">
-              Rs.
-            </span>
-            <input 
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full bg-white/3 border border-white/6 rounded-xl p-[16px_16px_16px_56px] text-2xl font-bold text-white outline-none focus:border-white/20 transition-all font-mono"
-            />
+      <div className="flex-1 w-full max-w-2xl mx-auto">
+        <div className="bg-bg-card border border-border-main rounded-2xl p-6 sm:p-10 shadow-xl relative overflow-hidden group transition-all">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-green/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+          
+          <div className="mb-10 text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Capital Synthesis</h1>
+            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Authorize liquidity bridge via biometric pulse</p>
           </div>
 
-          <div className="flex gap-2.5 mt-4">
-            {QUICK_AMOUNTS.map((q) => (
-              <button
-                key={q.value}
-                onClick={() => setAmount(q.value.toString())}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all border ${amount === q.value.toString() ? "bg-blue-500/15 border-blue-500 text-blue-500" : "bg-white/4 border-white/10 text-white/60 hover:bg-white/6"}`}
+          {success ? (
+            <div className="text-center py-8 animate-in zoom-in-95 duration-500">
+              <div className="w-20 h-20 bg-accent-green/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent-green/20 shadow-xl shadow-accent-green/10">
+                <CheckCircle2 className="text-accent-green w-10 h-10" />
+              </div>
+              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Synthesis Success</h2>
+              <p className="text-text-secondary text-[14px] mb-10 font-medium leading-relaxed">
+                Liquidity bridge established.<br />
+                <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> synthesized from<br />
+                <span className="text-accent-blue font-bold uppercase tracking-tight">{CONNECTED_BANKS.find(b => b.id === selectedSource)?.name}</span>
+              </p>
+              <button 
+                onClick={() => navigate("/dashboard")}
+                className="w-full sm:w-64 px-10 py-4 bg-accent-blue text-white rounded-xl font-bold hover:brightness-110 transition-all active:scale-95 shadow-xl shadow-accent-blue/20 font-heading uppercase tracking-widest text-[11px]"
               >
-                {q.label}
+                View Vault Balance
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-10">
+              {/* Linked Sources Selection */}
+              <div>
+                <div className="flex justify-between items-end mb-6 px-1">
+                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Funding Architecture</div>
+                    <button className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125">LINK NEW BANK</button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {CONNECTED_BANKS.map((bank) => (
+                    <button
+                      key={bank.id}
+                      onClick={() => setSelectedSource(bank.id)}
+                      className={`flex flex-col items-center gap-3 p-4 rounded-xl transition-all border relative overflow-hidden group ${selectedSource === bank.id ? "bg-accent-blue/5 border-accent-blue shadow-lg" : "bg-text-primary/5 border-border-main hover:border-text-primary/20"}`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${selectedSource === bank.id ? "bg-accent-blue text-white" : "bg-text-primary/10 text-text-secondary"}`}>
+                         <Building2 size={18} />
+                      </div>
+                      <div className="text-center overflow-hidden w-full">
+                         <div className={`text-[11px] font-bold truncate uppercase tracking-tight ${selectedSource === bank.id ? "text-text-primary" : "text-text-secondary"}`}>{bank.name}</div>
+                         <div className="text-[9px] text-text-secondary/50 font-bold tracking-widest mt-0.5">•• {bank.last4}</div>
+                      </div>
+                      {selectedSource === bank.id && (
+                        <div className="absolute top-1.5 right-1.5">
+                           <CheckCircle2 size={12} className="text-accent-blue" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        {/* Method Selection */}
-        <div className="mb-8">
-          <label className="text-[11px] font-bold text-white/30 tracking-widest mb-3 block uppercase">
-            SELECT PAYMENT METHOD
-          </label>
-          <div className="grid grid-cols-3 gap-3 mt-3">
-            {METHODS.map((m) => {
-              const Icon = m.icon;
-              const isSelected = method === m.id;
-              return (
+              {/* Amount Input Section */}
+              <div className="bg-text-primary/5 rounded-2xl p-8 sm:p-10 border border-border-main relative overflow-hidden">
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-6 block font-heading relative z-10">Synthesis Volume (RS)</label>
+                <div className="relative flex items-center justify-center z-10">
+                  <span className="text-2xl font-bold text-text-secondary/40 mr-4 font-heading">Rs.</span>
+                  <input
+                    value={amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    onBlur={handleAmountBlur}
+                    className="w-full bg-transparent border-none p-0 text-4xl sm:text-5xl font-bold text-text-primary tracking-tighter outline-none font-heading"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="flex gap-3 mt-8 overflow-x-auto no-scrollbar relative z-10">
+                   {QUICK_AMOUNTS.map(val => (
+                      <button 
+                        key={val}
+                        onClick={() => setAmount(val.toFixed(2))}
+                        className={`px-6 py-2.5 rounded-xl border transition-all whitespace-nowrap text-[12px] font-bold ${parseFloat(amount) === val ? "bg-accent-blue border-accent-blue text-white shadow-lg shadow-accent-blue/20" : "bg-text-primary/5 border-border-main text-text-primary hover:bg-text-primary/10"}`}
+                      >
+                        Rs. {val.toLocaleString()}
+                      </button>
+                   ))}
+                </div>
+              </div>
+
+              <div className="pt-2">
                 <button
-                  key={m.id}
-                  onClick={() => setMethod(m.id)}
-                  className={`flex flex-col items-center gap-2 p-3.5 rounded-xl transition-all border ${isSelected ? "bg-white/5 border-white/20" : "bg-white/3 border-white/8 hover:border-white/15"}`}
+                  onClick={handleDepositRequest}
+                  disabled={!amount || parseFloat(amount) < 100 || loading}
+                  className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-xl text-white text-sm font-bold tracking-[0.2em] shadow-lg active:scale-[0.99] transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
                 >
-                  <div 
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                    style={{ background: isSelected ? m.color : "rgba(255,255,255,0.05)" }}
-                  >
-                    <Icon size={18} />
+                  <div className="flex items-center gap-2.5">
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} 
+                    <span>{loading ? "Synthesizing..." : "Initiate Synthesis"}</span>
                   </div>
-                  <span className={`text-[11px] font-semibold transition-colors ${isSelected ? "text-white" : "text-white/40"}`}>
-                    {m.label}
-                  </span>
+                  {!loading && parseFloat(amount) < 100 && <span className="text-[9px] opacity-60">Min Rs. 100</span>}
                 </button>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Payment logic Integration */}
-        {method === "card" && amount && parseInt(amount) > 0 ? (
-          <Elements stripe={stripePromise}>
-            <CheckoutForm 
-              amount={amount} 
-              onBalanceAdd={addFunds} 
-              onPalmRequired={() => setIsScannerOpen(true)}
-            />
-          </Elements>
-        ) : (
-          <button
-            disabled={!amount || parseInt(amount) <= 0 || localLoading}
-            onClick={handleAuthorize}
-            className={`w-full py-3.5 rounded-xl flex items-center justify-center gap-2.5 text-white text-[15px] font-bold transition-all shadow-lg ${(!amount || parseInt(amount) <= 0) ? "bg-white/5 opacity-50 cursor-not-allowed" : "bg-gradient-to-r from-blue-600 to-blue-500 hover:brightness-110 active:scale-95"}`}
-          >
-            <Shield size={18} />
-            <span className="font-bold">
-              {method === "card" ? "Enter details above" : `Top up via Palm-ID™`}
-            </span>
-          </button>
-        )}
       </div>
 
       <PalmScanner 
@@ -250,4 +175,3 @@ export default function AddMoney() {
     </div>
   );
 }
-

@@ -49,6 +49,15 @@ app.get('/api/user/:clerkId', async (req, res) => {
     }
 });
 
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find({}, 'name clerkId phone');
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ── Palm Auth Proxy ─────────────────────────────────────────────────────────
 
 app.post('/api/palm/enroll', upload.single('file'), async (req, res) => {
@@ -110,7 +119,7 @@ app.get('/api/transactions/:clerkId', async (req, res) => {
 
 app.post('/api/transactions/create', upload.single('palm_image'), async (req, res) => {
     try {
-        const { clerkId, recipient, amount, category, description } = req.body;
+        const { clerkId, recipientId, recipient, amount, category, description } = req.body;
 
         if (!req.file) return res.status(400).json({ message: 'Palm authentication required' });
 
@@ -129,10 +138,14 @@ app.post('/api/transactions/create', upload.single('palm_image'), async (req, re
         if (!user) return res.status(404).json({ message: 'User not found' });
         if (user.balance < amount) return res.status(400).json({ message: 'Insufficient balance' });
 
-        const transaction = new Transaction({
-            userId: clerkId, // Using clerkId as string
+        // Atomic P2P Transfer logic
+        const recipientUser = await User.findOne({ clerkId: recipientId });
+        
+        // Debit the sender
+        const transactionOut = new Transaction({
+            userId: clerkId,
             sender: user.name || 'Me',
-            recipient,
+            recipient: recipient || (recipientUser?.name || 'Unknown'),
             amount: -Math.abs(amount),
             category,
             type: 'debit',
@@ -141,12 +154,69 @@ app.post('/api/transactions/create', upload.single('palm_image'), async (req, re
 
         user.balance -= Math.abs(amount);
         await user.save();
+        await transactionOut.save();
+
+        // Credit the recipient if they exist in our system
+        if (recipientUser) {
+            const transactionIn = new Transaction({
+                userId: recipientId,
+                sender: user.name || 'Me',
+                recipient: recipientUser.name,
+                amount: Math.abs(amount),
+                category,
+                type: 'credit',
+                description: `Received from ${user.name}`
+            });
+            recipientUser.balance += Math.abs(parseFloat(amount));
+            await recipientUser.save();
+            await transactionIn.save();
+        }
+
+        res.json({ message: 'Transaction successful', transaction: transactionOut, balance: user.balance });
+    } catch (err) {
+        console.error('Transaction Error:', err);
+        res.status(500).json({ error: 'Transaction failed' });
+    }
+});
+
+app.post('/api/wallet/add-funds', upload.single('palm_image'), async (req, res) => {
+    try {
+        const { clerkId, amount, source } = req.body;
+
+        if (!req.file) return res.status(400).json({ message: 'Palm authentication required' });
+
+        const form = new formData();
+        form.append('file', req.file.buffer, { filename: 'verify.jpg' });
+
+        const palmResp = await axios.post(`${PALM_AUTH_URL}/verify/${clerkId}`, form, {
+            headers: form.getHeaders(),
+        });
+
+        if (!palmResp.data.accepted) {
+            return res.status(401).json({ message: 'Palm authentication failed' });
+        }
+
+        const user = await User.findOne({ clerkId });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const transaction = new Transaction({
+            userId: clerkId,
+            sender: source || 'Bank Deposit',
+            recipient: user.name || 'My Vault',
+            amount: Math.abs(amount),
+            category: 'Deposit',
+            type: 'credit',
+            description: `Synthesis from ${source || 'external bank'}`
+        });
+
+        user.balance += Math.abs(parseFloat(amount));
+        await user.save();
         await transaction.save();
 
-        res.json({ message: 'Transaction successful', transaction, balance: user.balance });
+        res.json({ message: 'Capital synthesized successfully', transaction, balance: user.balance });
     } catch (err) {
-        console.error('Transaction Error:', err.response?.data || err.message);
-        res.status(500).json({ error: 'Transaction failed' });
+        console.error('Add Funds Error:', err.message);
+        res.status(500).json({ error: 'Deposit failed' });
     }
 });
 

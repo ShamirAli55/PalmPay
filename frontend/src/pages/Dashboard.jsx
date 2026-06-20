@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
@@ -11,6 +12,7 @@ import {
   Plus,
   BarChart2,
   TrendingDown,
+  Hand,
 } from "lucide-react";
 import {
   BarChart,
@@ -23,6 +25,7 @@ import {
   Tooltip,
 } from "recharts";
 import { STAT_CARDS, SPENDING_CHART, MY_CARDS } from "../constants/index";
+import VaultActions from "../components/ui/VaultActions";
 import { useWalletStore } from "../store/walletStore";
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -101,27 +104,29 @@ function ActionButton({ icon: Icon, label, variant = "secondary", onClick }) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { balance } = useWalletStore();
+  const { user } = useUser();
+  const { balance, fetchData, getComputedStats, getChartData } = useWalletStore();
   const [chartRange, setChartRange] = useState("week");
   const activeCard = MY_CARDS[0];
+
+  useEffect(() => {
+    if (user) fetchData(user.id);
+  }, [user, fetchData]);
+
+  const stats = getComputedStats();
+  const chartData = getChartData();
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen">
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {STAT_CARDS.map((card) => (
+        {stats.map((card) => (
           <StatCard key={card.id} card={card} />
         ))}
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <ActionButton icon={Send} label="Send Money" variant="primary" onClick={() => navigate("/send")} />
-        <ActionButton icon={Download} label="Receive" onClick={() => navigate("/receive")} />
-        <ActionButton icon={Plus} label="Add Funds" onClick={() => { }} />
-        <ActionButton icon={BarChart2} label="Analytics" onClick={() => navigate("/analytics")} />
-      </div>
+      <VaultActions className="grid grid-cols-2 lg:grid-cols-4" />
 
       {/* Charts & Balance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -152,7 +157,7 @@ export default function Dashboard() {
           <div className="h-[280px] w-full mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={SPENDING_CHART[chartRange]}
+                data={chartData[chartRange]}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 barCategoryGap="10%"
               >
@@ -204,10 +209,10 @@ export default function Dashboard() {
                   radius={[2, 2, 0, 0]}
                   animationDuration={1500}
                 >
-                  {SPENDING_CHART[chartRange].map((entry, index) => (
+                  {chartData[chartRange].map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={index === SPENDING_CHART[chartRange].length - 1 ? "url(#barGradient)" : "url(#inactiveGradient)"}
+                      fill={index === chartData[chartRange].length - 1 ? "url(#barGradient)" : "url(#inactiveGradient)"}
                       className="transition-all duration-500 hover:opacity-80 cursor-pointer"
                     />
                   ))}
@@ -288,6 +293,32 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Security Status - The 'Normal' Placeholder */}
+      <div className="bg-bg-card border border-border-main rounded-2xl p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 mb-12 group transition-all hover:shadow-md">
+         <div className="flex items-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-accent-blue/10 flex items-center justify-center border border-accent-blue/20 group-hover:scale-105 transition-transform duration-500 shadow-sm shadow-accent-blue/10">
+               <Hand className="w-8 h-8 text-accent-blue" />
+            </div>
+            <div>
+               <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight leading-none mb-2">Palm-ID™ Bio-Security</h2>
+               <p className="text-[12px] text-text-secondary font-medium max-w-[320px] leading-relaxed">Your biometric signature is currently protecting 12 active channels. Continuity check complete.</p>
+            </div>
+         </div>
+
+         <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="hidden md:flex flex-col items-end mr-4">
+               <span className="text-[10px] text-accent-green font-black uppercase tracking-widest">System Online</span>
+               <span className="text-[11px] text-text-secondary font-medium">Last scan: Today, 10:45 AM</span>
+            </div>
+            <button 
+              onClick={() => navigate("/security")}
+              className="flex-1 md:flex-none px-10 py-4 bg-bg-main border border-border-main rounded-xl text-[12px] font-bold text-text-primary uppercase tracking-widest hover:bg-text-primary/5 transition-all active:scale-95 font-heading"
+            >
+              Security Hub
+            </button>
+         </div>
       </div>
     </div>
   );

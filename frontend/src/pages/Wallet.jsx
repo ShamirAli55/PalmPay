@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
+import { useWalletStore } from "../store/walletStore";
 import {
   Plus, ArrowLeftRight, Eye, EyeOff, Lock, Building2,
-  ShoppingBag, Briefcase, UtensilsCrossed, CreditCard, Send, Download
+  ShoppingBag, Briefcase, UtensilsCrossed, CreditCard
 } from "lucide-react";
-import { MY_CARDS, CONNECTED_BANKS, RECENT_TRANSACTIONS } from "../constants/index";
+import VaultActions from "../components/ui/VaultActions";
+import { MY_CARDS, CONNECTED_BANKS } from "../constants/index";
 
 const MERCHANT_ICONS = {
   TECHNOLOGY: ShoppingBag,
@@ -92,8 +95,14 @@ function PalmIDPanel() {
 }
 
 export default function Wallet() {
+  const { user } = useUser();
+  const { balance, fetchData } = useWalletStore();
   const [activeCardId, setActiveCardId] = useState(MY_CARDS[0].id);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) fetchData(user.id);
+  }, [user, fetchData]);
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen">
@@ -102,27 +111,13 @@ export default function Wallet() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent-blue/5 rounded-full blur-[100px] -mr-32 -mt-32" />
         <div className="relative z-10 text-center xl:text-left">
           <div className="text-[11px] text-text-secondary tracking-[0.3em] font-bold uppercase font-heading">CUMULATIVE VAULT VALUE</div>
-          <div className="text-4xl lg:text-6xl font-bold text-text-primary tracking-tighter my-3 font-heading">Rs. 500,000.00</div>
+          <div className="text-4xl lg:text-6xl font-bold text-text-primary tracking-tighter my-3 font-heading">Rs. {balance.toLocaleString()}</div>
           <div className="flex items-center justify-center xl:justify-start gap-4">
             <span className="flex items-center gap-1.5 text-[12px] font-bold text-accent-green bg-accent-green/12 rounded-lg px-2.5 py-1 shadow-sm whitespace-nowrap">↑ +2.4%</span>
             <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest opacity-50">Trend Baseline</span>
           </div>
         </div>
-        <div className="flex flex-wrap justify-center xl:justify-end gap-3 shrink-0 relative z-10">
-          {[
-            { label: "Transfer", icon: Send, action: () => navigate("/send"), cls: "bg-accent-green text-white shadow-lg shadow-accent-green/20" },
-            { label: "Withdraw", icon: Download, action: () => navigate("/receive"), cls: "bg-accent-blue text-white shadow-lg shadow-accent-blue/20" },
-            { label: "Deposit", icon: Plus, action: () => {}, cls: "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary" },
-            { label: "Swap", icon: ArrowLeftRight, action: () => {}, cls: "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary" },
-          ].map((btn) => {
-            const Icon = btn.icon;
-            return (
-              <button key={btn.label} onClick={btn.action} className={`flex items-center gap-2.5 py-3.5 px-6 rounded-xl text-[13px] font-bold transition-all active:scale-95 cursor-pointer font-heading uppercase tracking-wide ${btn.cls}`}>
-                <Icon size={16} /> {btn.label}
-              </button>
-            );
-          })}
-        </div>
+        <VaultActions mode="wallet" className="justify-center xl:justify-end shrink-0 relative z-10" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

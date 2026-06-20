@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
+import { useWalletStore } from "../store/walletStore";
 import {
   AreaChart,
   Area,
@@ -32,14 +35,25 @@ const PIE_DATA = [
   { name: "Utils", value: 200, color: "#ec4899" },
 ];
 
-const STATS = [
-  { label: "Total Revenue", value: "Rs. 45,285", growth: "+12.5%", positive: true },
-  { label: "Total Expenses", value: "Rs. 12,432", growth: "-3.2%", positive: false },
-  { label: "Net Savings", value: "Rs. 32,853", growth: "+18.4%", positive: true },
-];
-
 // ── Analytics Component ──────────────────────────────────────────────────────
 export default function Analytics() {
+  const { user } = useUser();
+  const { transactions, fetchData } = useWalletStore();
+
+  useEffect(() => {
+    if (user) fetchData(user.id);
+  }, [user, fetchData]);
+
+  const totalIncome = transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
+  const totalSpend = Math.abs(transactions.filter(t => t.type === 'debit').reduce((acc, t) => acc + t.amount, 0));
+  const netSavings = totalIncome - totalSpend;
+
+  const stats = [
+    { label: "Total Revenue", value: `Rs. ${totalIncome.toLocaleString()}`, growth: "+12.5%", positive: true },
+    { label: "Total Expenses", value: `Rs. ${totalSpend.toLocaleString()}`, growth: "-3.2%", positive: false },
+    { label: "Net Savings", value: `Rs. ${netSavings.toLocaleString()}`, growth: "+18.4%", positive: true },
+  ];
+
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-1.5 min-h-screen">
       {/* Header */}
@@ -50,7 +64,7 @@ export default function Analytics() {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {STATS.map((stat) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="bg-bg-card border border-border-main rounded-xl p-6 shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest font-heading">{stat.label}</span>

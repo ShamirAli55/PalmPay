@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
+import { useWalletStore } from "../store/walletStore";
 import {
   Download,
   FileText,
@@ -12,7 +14,6 @@ import {
   AlertTriangle,
   ArrowUpDown,
 } from "lucide-react";
-import { ALL_TRANSACTIONS } from "../constants/index";
 
 const CATEGORIES = ["All Categories", "Transfer", "Shopping", "Income", "Software", "Technology"];
 const PAGE_SIZE = 5;
@@ -46,15 +47,30 @@ function Avatar({ name, color }) {
 const AVATAR_COLORS = ["var(--accent-blue)", "var(--accent-green)", "#f97316", "#8b5cf6", "#ec4899"];
 
 export default function Transactions() {
+  const { user } = useUser();
+  const { transactions, fetchData } = useWalletStore();
   const [category, setCategory] = useState("All Categories");
   const [page, setPage] = useState(1);
 
-  const filtered = category === "All Categories"
-    ? ALL_TRANSACTIONS
-    : ALL_TRANSACTIONS.filter((t) => t.category === category);
+  useEffect(() => {
+    if (user) fetchData(user.id);
+  }, [user, fetchData]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const filtered = category === "All Categories"
+    ? transactions
+    : transactions.filter((t) => (t.category || "Transfer") === category);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const formatTxnDate = (d) => {
+    const date = new Date(d);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+  const formatTxnTime = (d) => {
+    const date = new Date(d);
+    return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  };
 
   const handleExport = (type) => alert(`Exporting as ${type} to secure storage…`);
 
@@ -144,22 +160,22 @@ export default function Transactions() {
                     className="grid grid-cols-[2fr_1fr_1.2fr_1fr_1fr] px-6 py-5 items-center gap-4 hover:bg-text-primary/2 transition-all cursor-pointer group"
                 >
                     <div className="flex items-center gap-4 min-w-0">
-                    <Avatar name={txn.recipient} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
+                    <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
                     <div className="min-w-0">
-                        <div className="text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient}</div>
-                        <div className="text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.email}</div>
+                        <div className="text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
+                        <div className="text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Digital Settlement"}</div>
                     </div>
                     </div>
 
                     <div className="flex">
                     <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-3 py-1 text-[11px] text-text-secondary font-bold font-heading uppercase">
-                        <CatIcon size={12} /> {txn.category}
+                        <CatIcon size={12} /> {txn.category || "Transfer"}
                     </div>
                     </div>
 
                     <div>
-                    <div className="text-[13px] font-bold text-text-primary font-heading tracking-tight">{txn.date}</div>
-                    <div className="text-[11px] text-text-secondary font-medium tracking-widest">{txn.time}</div>
+                    <div className="text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
+                    <div className="text-[11px] text-text-secondary font-medium tracking-widest">{formatTxnTime(txn.date)}</div>
                     </div>
 
                     <div>

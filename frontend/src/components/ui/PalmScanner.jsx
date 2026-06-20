@@ -68,7 +68,7 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
   const captureFrame = () => {
     if (!videoRef.current) return null;
     const canvas = document.createElement("canvas");
-    canvas.width = 256; canvas.height = 256;
+    canvas.width = 512; canvas.height = 512;
     const ctx = canvas.getContext("2d");
     const v = videoRef.current;
     
@@ -76,13 +76,9 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     const x = (v.videoWidth - size) / 2;
     const y = (v.videoHeight - size) / 2;
     
-    if (facingMode === "user") {
-        ctx.translate(256, 0);
-        ctx.scale(-1, 1);
-    }
-    
-    ctx.drawImage(v, x, y, size, size, 0, 0, 256, 256);
-    return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+    // NO MIRRORING for capture - keep original sensor data for AI
+    ctx.drawImage(v, x, y, size, size, 0, 0, 512, 512);
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
   };
 
   const handleScan = async () => {
@@ -180,23 +176,29 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
                 autoPlay 
                 playsInline 
                 muted 
-                className={`w-full h-full object-cover transition-all duration-1000 ${isSuccess ? 'scale-110 blur-sm brightness-50' : 'grayscale contrast-125'} ${facingMode === 'user' ? '-scale-x-100' : ''}`} 
+                className={`w-full h-full object-cover transition-all duration-1000 ${isSuccess ? 'scale-110 blur-sm brightness-50' : ''} ${facingMode === 'user' ? '-scale-x-100' : ''}`}
             />
             
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-12">
-               <svg viewBox="0 0 200 240" fill="none" className="w-full h-full drop-shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-                  <path 
-                    d="M30,180 Q30,220 50,220 Q70,220 80,180 M170,180 Q170,220 150,220 Q130,220 120,180 M40,160 C40,100 50,60 80,40 C90,30 110,30 120,40 C150,60 160,100 160,160 C160,190 150,210 130,210 C100,210 100,180 100,180 C100,180 100,210 70,210 C50,210 40,190 40,160 Z" 
-                    stroke={guideColor} strokeWidth="3" strokeLinecap="round" strokeDasharray="8 8"
-                    className="transition-colors duration-300"
-                  />
-               </svg>
+            {/* Professional Scan Brackets */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-[70%] h-[70%] border-2 border-dashed border-white/20 rounded-[40px] relative">
+                {/* Corners */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-2xl transition-colors duration-500" style={{ borderColor: guideColor }} />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-2xl transition-colors duration-500" style={{ borderColor: guideColor }} />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-2xl transition-colors duration-500" style={{ borderColor: guideColor }} />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-2xl transition-colors duration-500" style={{ borderColor: guideColor }} />
+                
+                {/* Subtle Hand Icon placeholder */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                  <Hand size={120} strokeWidth={1} />
+                </div>
+              </div>
             </div>
 
             {scanning && (
                 <motion.div 
-                    initial={{ top: -20 }} animate={{ top: "110%" }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                    className="absolute left-0 right-0 h-0.5 bg-accent-blue shadow-[0_0_20px_var(--accent-blue)] z-10"
+                    initial={{ top: "15%" }} animate={{ top: "85%" }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    className="absolute left-[15%] right-[15%] h-0.5 bg-accent-blue shadow-[0_0_20px_var(--accent-blue)] z-10"
                 />
             )}
 
