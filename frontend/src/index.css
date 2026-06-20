@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/outfit";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =========================
+   PALMPAY DESIGN SYSTEM
+========================= */
+:root {
+  /* Light mode */
+  --bg-main: #f1f5f9;
+  --bg-card: #ffffff;
+  --border-main: rgba(0, 0, 0, 0.07);
+  --text-primary: #0f172a;
+  --text-secondary: rgba(15, 23, 42, 0.55);
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+}
+
+.dark {
+  /* Dark mode — THE ORIGINAL LOOK */
+  --bg-main: #080e1a;
+  --bg-card: #0d1424;
+  --border-main: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.45);
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 10%;
+  --card-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --border: 217.2 32.6% 17.5%;
+}
+
+/* =========================
+   GLOBAL STYLES
+========================= */
+html, body, #root {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter Variable', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Outfit Variable', sans-serif;
+}
+
+/* Scrollbar Hide */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+@theme inline {
+  --font-heading: 'Outfit Variable', sans-serif;
+  --font-sans: 'Inter Variable', sans-serif;
+
+  --color-bg-main: var(--bg-main);
+  --color-bg-card: var(--bg-card);
+  --color-border-main: var(--border-main);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-green: var(--accent-green);
+  --color-accent-red: var(--accent-red);
+
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+@layer base {
+  * {
+    @apply border-border-main;
+  }
+}
+
+/*
+   CLERK BRANDING REMOVAL
+   ================================= */
+.cl-internal-2yt9m8,
+.cl-internal-1dauvpw,
+.cl-footer,
+.cl-cardFooter,
+.cl-dev-badge,
+.cl-branding,
+.cl-internal-df68v5,
+[data-clerk-brand],
+.cl-userButtonPopoverFooter,
+.cl-internal-b3fm6y,
+.cl-userButtonPopoverActions {
+  display: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.cl-userButtonPopoverFooter + div,
+.cl-internal-xl0p27 {
+  display: none !important;
+}
+
+/* Fix Profile Icon in Topbar */
+.cl-userButtonTrigger {
+  border: 1px solid var(--border-main) !important;
+  background: var(--bg-card) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease !important;
+  overflow: hidden !important;
+}
+.cl-userButtonTrigger:hover {
+  border-color: var(--accent-blue) !important;
+  transform: scale(1.02);
+}
+.cl-avatarBox {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+}
