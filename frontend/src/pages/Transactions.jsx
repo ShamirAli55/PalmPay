@@ -138,7 +138,7 @@ export default function Transactions() {
             onClick={() => handleExport("PDF")}
             className="w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-6 bg-accent-blue rounded-xl text-white text-[11px] font-bold hover:brightness-110 transition-all uppercase tracking-widest font-heading shadow-lg shadow-accent-blue/10"
           >
-            <FileText size={14} /> Generate PDF Statement
+            <FileText size={14} /> Generate Report
           </button>
         </div>
       </div>
