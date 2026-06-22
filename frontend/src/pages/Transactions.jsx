@@ -125,6 +125,9 @@ export default function Transactions() {
     }
   };
 
+  const [showAllContacts, setShowAllContacts] = useState(false);
+  const uniqueContacts = [...new Set(transactions.map(t => t.recipient).filter(Boolean))];
+
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-1.5 min-h-screen">
       {/* Header */}
@@ -159,12 +162,12 @@ export default function Transactions() {
           />
         </div>
 
-        {/* Dynamic Scrollable Recent Contacts */}
-        {transactions.length > 0 && (
+        {/* Dynamic Expandable Recent Contacts */}
+        {uniqueContacts.length > 0 && (
           <div className="flex items-center gap-4 w-full lg:w-auto lg:ml-auto">
              <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest shrink-0">Recent Contacts:</span>
-            <div className="flex -space-x-2 overflow-x-auto no-scrollbar py-2 px-1 flex-1 lg:max-w-[240px]">
-              {[...new Set(transactions.map(t => t.recipient).filter(Boolean))].slice(0, 10).map((name, i) => {
+            <div className={`flex -space-x-2 overflow-x-auto no-scrollbar py-2 px-1 transition-all duration-500 ease-in-out ${showAllContacts ? "w-[240px] sm:w-[400px]" : "w-[150px]"}`}>
+              {uniqueContacts.slice(0, showAllContacts ? undefined : 4).map((name, i) => {
                 const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
                 return (
                   <div 
@@ -177,6 +180,24 @@ export default function Transactions() {
                   </div>
                 );
               })}
+              {!showAllContacts && uniqueContacts.length > 4 && (
+                <button
+                  onClick={() => setShowAllContacts(true)}
+                  className="w-8 h-8 rounded-full bg-text-primary/5 border-2 border-dashed border-border-main flex items-center justify-center text-[10px] font-bold text-text-secondary hover:bg-text-primary/10 transition-all cursor-pointer shadow-sm relative z-0 shrink-0"
+                >
+                  +{uniqueContacts.length - 4}
+                </button>
+              )}
+              {showAllContacts && (
+                <div 
+                  onClick={() => setShowAllContacts(false)}
+                  className="sticky right-0 top-0 bottom-0 z-30 flex items-center pl-8 pr-2 bg-gradient-to-l from-bg-card via-bg-card to-transparent cursor-pointer group"
+                >
+                  <button className="px-3 h-8 rounded-full bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center text-[9px] font-bold text-accent-blue hover:bg-accent-blue hover:text-white transition-all uppercase tracking-tighter shadow-sm">
+                    Hide
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -185,10 +206,17 @@ export default function Transactions() {
       {/* Table container */}
       <div className="bg-bg-card border border-border-main rounded-xl overflow-hidden shadow-sm overflow-x-auto no-scrollbar">
         <div className="min-w-[800px]">
-            <div className="grid grid-cols-[2fr_1fr_1.2fr_1fr_1fr] px-6 py-4 border-b border-border-main bg-text-primary/2">
-            {["RECIPIENT", "CATEGORY", "DATE & TIME", "STATUS", "AMOUNT"].map((col) => (
-                <div key={col} className="text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading">
-                {col}
+            <div className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-6 py-4 border-b border-border-main bg-text-primary/2 gap-4">
+            {["RECIPIENT", "CATEGORY", "DATE & TIME", "STATUS", "AMOUNT"].map((col, i) => (
+                <div 
+                  key={col} 
+                  className={`text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading ${
+                    col === "STATUS" || col === "DATE & TIME" ? "justify-center text-center" : 
+                    col === "AMOUNT" ? "justify-end text-right" : 
+                    "justify-start"
+                  }`}
+                >
+                  {col}
                 </div>
             ))}
             </div>
@@ -200,41 +228,50 @@ export default function Transactions() {
                 const sc = STATUS_MAP[txn.status] || STATUS_MAP.Processed;
 
                 return (
-                <div
-                    key={txn.id}
-                    className="grid grid-cols-[2fr_1fr_1.2fr_1fr_1fr] px-6 py-5 items-center gap-4 hover:bg-text-primary/2 transition-all cursor-pointer group"
-                >
-                    <div className="flex items-center gap-4 min-w-0">
-                    <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
-                    <div className="min-w-0">
+                  <div
+                    key={txn._id || idx}
+                    className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-6 py-5 items-center gap-4 border-b border-border-main/50 hover:bg-text-primary/2 transition-all cursor-pointer group"
+                  >
+                    {/* Recipient */}
+                    <div className="flex items-center gap-4 min-w-0 h-full">
+                      <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
+                      <div className="min-w-0">
                         <div className="text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
-                        <div className="text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Transfer"}</div>
-                    </div>
+                        <div className="text-[11px] text-text-secondary truncate mt-1 font-medium">{txn.description || "Transfer"}</div>
+                      </div>
                     </div>
 
-                    <div className="flex">
-                    <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-3 py-1 text-[11px] text-text-secondary font-bold font-heading uppercase">
+                    {/* Category */}
+                    <div className="flex items-center h-full">
+                      <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-3 py-1.5 text-[10px] text-text-secondary font-bold font-heading uppercase">
                         <CatIcon size={12} /> {txn.category || "Transfer"}
-                    </div>
-                    </div>
-
-                    <div>
-                    <div className="text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
-                    <div className="text-[11px] text-text-secondary font-medium tracking-widest">{formatTxnTime(txn.date)}</div>
+                      </div>
                     </div>
 
-                    <div>
-                    <div className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-bold font-heading uppercase tracking-wide ${sc.text} ${sc.bg}`}>
-                        <div className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse`} />
+                    {/* Date/Time */}
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
+                        <div className="text-[11px] text-text-secondary font-medium tracking-widest mt-1 uppercase">{formatTxnTime(txn.date)}</div>
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="flex items-center justify-center h-full">
+                      <div className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-bold font-heading uppercase tracking-wide ${sc.text} ${sc.bg}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} animate-pulse`} />
                         {txn.status}
-                    </div>
+                      </div>
                     </div>
 
-                    <div className={`text-[15px] font-bold text-right font-heading tracking-tighter ${isPositive ? "text-accent-green" : "text-accent-red"}`}>
-                    {isPositive ? "+" : ""}
-                    Rs. {Math.abs(txn.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {/* Amount */}
+                    <div className="flex items-center justify-end h-full">
+                      <div className={`text-[16px] font-bold text-right font-heading tracking-tighter ${isPositive ? "text-accent-green" : "text-accent-red"}`}>
+                        {isPositive ? "+" : ""}
+                        Rs. {Math.abs(txn.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </div>
                     </div>
-                </div>
+                  </div>
                 );
             })}
             </div>
