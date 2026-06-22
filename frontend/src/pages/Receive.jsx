@@ -31,7 +31,7 @@ export default function Receive() {
       <div className="flex items-center justify-between px-2">
          <div className="flex items-center gap-2.5">
             <div className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse shadow-[0_0_8px_var(--accent-green)]" />
-            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Receiving Protocol</span>
+            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Receiving</span>
          </div>
          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30">P-ID v4.0</span>
       </div>
@@ -41,8 +41,8 @@ export default function Receive() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-blue/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
           <div className="mb-10 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Inbound Vault</h1>
-            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Your unique biometric signature for receiving capital</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Receive Money</h1>
+            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Use your unique QR code to receive payments</p>
           </div>
 
           <div className="flex flex-col gap-10">
@@ -71,7 +71,7 @@ export default function Receive() {
                 <div className="w-full flex items-center justify-between bg-text-primary/5 border border-border-main rounded-xl p-4 px-6 relative group overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
                     <div>
-                        <div className="text-[10px] text-text-secondary tracking-[0.25em] mb-1.5 font-bold uppercase font-heading">Vault Signature ID</div>
+                        <div className="text-[10px] text-text-secondary tracking-[0.25em] mb-1.5 font-bold uppercase font-heading">Wallet ID</div>
                         <div className="text-[14px] font-bold text-text-primary tracking-widest font-mono truncate max-w-[200px] sm:max-w-none">{WALLET_ID}</div>
                     </div>
                     <button
@@ -86,14 +86,14 @@ export default function Receive() {
             {/* Real History Section */}
             <div className="pt-4 border-t border-text-primary/5">
                 <div className="flex justify-between items-end mb-6 px-1">
-                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Verified Arrivals</div>
+                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Recent Deposits</div>
                     <History className="text-text-secondary/30" size={14} />
                 </div>
                 
                 <div className="space-y-3">
                     {loading ? (
                        <div className="flex items-center justify-center py-10 text-text-secondary opacity-40 italic text-[11px] uppercase tracking-widest gap-2">
-                           <Loader2 className="animate-spin" size={14} /> Syncing Vault History...
+                           <Loader2 className="animate-spin" size={14} /> Loading transaction history...
                        </div>
                     ) : inboundHistory.length > 0 ? (
                         inboundHistory.map((req) => (
@@ -115,13 +115,13 @@ export default function Receive() {
                                     <div className="text-[14px] font-extrabold text-accent-green font-heading tracking-tighter">
                                         +Rs. {Math.abs(req.amount).toLocaleString()}
                                     </div>
-                                    <div className="text-[9px] text-text-secondary font-bold uppercase bg-accent-green/10 text-accent-green px-1.5 py-0.5 rounded-md inline-block mt-1">SECURE</div>
+                                    <div className="text-[9px] text-text-secondary font-bold uppercase bg-accent-green/10 text-accent-green px-1.5 py-0.5 rounded-md inline-block mt-1">RECEIVED</div>
                                 </div>
                             </div>
                         ))
                     ) : (
                         <div className="text-center py-12 bg-text-primary/2 rounded-2xl border border-dashed border-border-main">
-                            <p className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] opacity-40 italic">No incoming transmissions recorded</p>
+                            <p className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] opacity-40 italic">No incoming payments yet</p>
                         </div>
                     )}
                 </div>
@@ -131,7 +131,7 @@ export default function Receive() {
                 <button
                    className="w-full py-5 bg-text-primary/5 hover:bg-text-primary/10 rounded-xl text-text-secondary text-[11px] font-bold tracking-[0.2em] shadow-sm active:scale-[0.99] transition-all font-heading uppercase"
                 >
-                   Share Secure Receipt Link
+                   Share Payment Link
                 </button>
             </div>
           </div>

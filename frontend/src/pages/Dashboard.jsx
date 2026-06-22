@@ -77,7 +77,7 @@ function StatCard({ card }) {
       {card.showChart && (
         <div className="absolute bottom-0 left-0 right-0 h-12 opacity-15 pointer-events-none">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={SPENDING_CHART.week}>
+            <BarChart data={card.chartData || []}>
               <Bar dataKey="amount" fill="var(--accent-blue)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -105,9 +105,9 @@ function ActionButton({ icon: Icon, label, variant = "secondary", onClick }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { balance, fetchData, getComputedStats, getChartData } = useWalletStore();
+  const { balance, cards, activeCardId, fetchData, getComputedStats, getChartData, getFinancialSummary } = useWalletStore();
   const [chartRange, setChartRange] = useState("week");
-  const activeCard = MY_CARDS[0];
+  const activeCard = cards.find(c => c.id === activeCardId) || cards[0] || MY_CARDS[0];
 
   useEffect(() => {
     if (user) fetchData(user.id);
@@ -115,6 +115,11 @@ export default function Dashboard() {
 
   const stats = getComputedStats();
   const chartData = getChartData();
+  const summary = getFinancialSummary();
+  // Inject weekly chart data into the first stat card for the background visualization
+  if (stats.length > 0) {
+    stats[0].chartData = chartData.week;
+  }
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen">
@@ -135,8 +140,8 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-bg-card border border-border-main rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col gap-8 transition-all hover:shadow-md">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">Spending Analytics</h2>
-              <p className="text-[12px] text-text-secondary mt-1 font-medium italic opacity-70">Visualization of your capital flow</p>
+              <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">Spending Overview</h2>
+              <p className="text-[12px] text-text-secondary mt-1 font-medium italic opacity-70">A summary of your recent spending habits</p>
             </div>
             <div className="flex bg-text-primary/5 rounded-xl p-1 self-start sm:self-auto border border-border-main/50">
               {["week", "month", "year"].map((r) => (
@@ -277,7 +282,7 @@ export default function Dashboard() {
                   <div className="text-[11px] text-text-secondary font-medium">This month</div>
                 </div>
               </div>
-              <span className="text-[13px] font-black text-accent-green">+Rs. 1,450</span>
+              <span className="text-[13px] font-black text-accent-green">+Rs. {summary.income.toLocaleString()}</span>
             </div>
             <div className="bg-text-primary/5 border border-border-main rounded-xl p-4 flex items-center justify-between cursor-default hover:border-accent-red/30 transition-all">
               <div className="flex items-center gap-3">
@@ -289,7 +294,7 @@ export default function Dashboard() {
                   <div className="text-[11px] text-text-secondary font-medium">This month</div>
                 </div>
               </div>
-              <span className="text-[13px] font-black text-text-primary">-Rs. 840</span>
+              <span className="text-[13px] font-black text-text-primary">-Rs. {summary.spend.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -302,21 +307,21 @@ export default function Dashboard() {
                <Hand className="w-8 h-8 text-accent-blue" />
             </div>
             <div>
-               <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight leading-none mb-2">Palm-ID™ Bio-Security</h2>
-               <p className="text-[12px] text-text-secondary font-medium max-w-[320px] leading-relaxed">Your biometric signature is currently protecting 12 active channels. Continuity check complete.</p>
+               <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">Palm Recognition Security</h2>
+               <p className="text-[12px] text-text-secondary font-medium max-w-[320px] leading-relaxed">Your palm scan is active. Your account is fully protected.</p>
             </div>
          </div>
 
          <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="hidden md:flex flex-col items-end mr-4">
-               <span className="text-[10px] text-accent-green font-black uppercase tracking-widest">System Online</span>
-               <span className="text-[11px] text-text-secondary font-medium">Last scan: Today, 10:45 AM</span>
+                <span className="text-[10px] text-accent-green font-black uppercase tracking-widest">Protected</span>
+                <span className="text-[11px] text-text-secondary font-medium">Last scan: Today, 10:45 AM</span>
             </div>
             <button 
               onClick={() => navigate("/security")}
               className="flex-1 md:flex-none px-10 py-4 bg-bg-main border border-border-main rounded-xl text-[12px] font-bold text-text-primary uppercase tracking-widest hover:bg-text-primary/5 transition-all active:scale-95 font-heading"
             >
-              Security Hub
+               Security Settings
             </button>
          </div>
       </div>

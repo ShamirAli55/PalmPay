@@ -75,7 +75,7 @@ export const SPENDING_CHART = {
 export const RECENT_TRANSACTIONS = [
   {
     id: "txn-001",
-    merchant: "Node Protocol Payout",
+    merchant: "Service Payout",
     category: "INCOME",
     time: "12:45 PM",
     amount: +1299.0,
@@ -213,8 +213,10 @@ export const MY_CARDS = [
 
 // ─── Connected Banks ──────────────────────────────────────────────────────────
 export const CONNECTED_BANKS = [
-  { id: "bank-001", name: "Chase Savings", last4: "9901", balance: 12400 },
-  { id: "bank-002", name: "Goldman Asset", last4: "4423", balance: 84000 },
+  { id: "bank-001", name: "HBL Bank", last4: "4920", balance: 45000 },
+  { id: "bank-002", name: "Meezan Bank", last4: "1155", balance: 82000 },
+  { id: "bank-003", name: "Easypaisa", last4: "8829", balance: 12500 },
+  { id: "bank-004", name: "JazzCash", last4: "0042", balance: 3200 },
 ];
 
 // ─── Send - Contacts ──────────────────────────────────────────────────────────
@@ -276,7 +278,7 @@ export const SPENDING_VS_INCOME = {
   ],
 };
 
-export const WEALTH_TRAJECTORY = [
+export const BALANCE_GROWTH = [
   { month: "Jan", value: 85000 },
   { month: "Feb", value: 92000 },
   { month: "Mar", value: 78000 },

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Send, Plus, Download, BarChart2, ArrowLeftRight } from "lucide-react";
+import { Send, Plus, Download, BarChart2, History } from "lucide-react";
 
 export default function VaultActions({ className = "", mode = "dashboard" }) {
   const navigate = useNavigate();
@@ -24,10 +24,10 @@ export default function VaultActions({ className = "", mode = "dashboard" }) {
       cls: "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary" 
     },
     mode === "wallet" ? { 
-      label: "Swap", 
-      icon: ArrowLeftRight, 
-      path: "#", 
-      cls: "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary opacity-50 cursor-not-allowed" 
+      label: "History", 
+      icon: History, 
+      path: "/transactions", 
+      cls: "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary" 
     } : { 
       label: "Analytics", 
       icon: BarChart2, 

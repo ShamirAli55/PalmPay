@@ -22,7 +22,7 @@ function CardVisual({ card, isActive, onClick }) {
     <div
       onClick={onClick}
       style={{ background: card.color }}
-      className={`rounded-2xl p-6 cursor-pointer relative overflow-hidden transition-all duration-200 min-h-[150px] flex-1 shadow-lg ${isActive ? "ring-2 ring-white/40 ring-offset-2 ring-offset-bg-card scale-[1.02]" : "opacity-80 hover:opacity-100 hover:scale-[1.01]"}`}
+      className={`rounded-2xl p-6 cursor-pointer relative overflow-hidden transition-all duration-200 min-h-[160px] w-full md:w-[320px] md:flex-none shadow-lg ${isActive ? "ring-2 ring-white/40 ring-offset-2 ring-offset-bg-card scale-[1.02]" : "opacity-80 hover:opacity-100 hover:scale-[1.01]"}`}
     >
       <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
       <div className="flex justify-between items-start mb-5">
@@ -43,8 +43,10 @@ function CardVisual({ card, isActive, onClick }) {
   );
 }
 
-function VirtualCardSettings() {
+function VirtualCardSettings({ card }) {
   const [revealed, setRevealed] = useState(false);
+  if (!card) return null;
+
   return (
     <div className="bg-bg-card border border-border-main rounded-2xl p-6 flex flex-col md:flex-row gap-6 flex-1 shadow-sm">
       <div
@@ -53,22 +55,24 @@ function VirtualCardSettings() {
       >
         {revealed ? <Eye size={22} className="text-accent-blue" /> : <EyeOff size={22} className="text-text-secondary" />}
         <span className="text-[10px] text-text-secondary tracking-[0.2em] uppercase font-bold text-center font-heading">
-          {revealed ? "SECURE CARD NO." : "TAP TO UNLOCK"}
+          {revealed ? "HIDE CARD DETAILS" : "VIEW CARD DETAILS"}
         </span>
-        <span className={`text-text-primary font-bold tracking-widest font-mono text-center ${revealed ? "text-[14px]" : "text-[12px]"}`}>
-          {revealed ? "4532 •••• •••• 8829" : "•••• •••• •••• ••••"}
+        <span className={`text-text-primary font-bold font-mono text-center whitespace-nowrap px-2 ${revealed ? "text-[13px] tracking-normal" : "text-[13px] tracking-normal"}`}>
+          {revealed ? `4532 8812 0041 ${card.last4}` : `•••• •••• •••• ${card.last4}`}
         </span>
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-3 mb-3">
-          <span className="text-base font-bold text-text-primary font-heading uppercase tracking-tight">Virtual Protocol</span>
-          <span className="text-[10px] font-bold bg-accent-green/10 text-accent-green rounded-lg px-2.5 py-1 tracking-widest uppercase">Active</span>
+          <span className="text-base font-bold text-text-primary font-heading uppercase tracking-tight">{card.label}</span>
+          <span className={`text-[10px] font-bold rounded-lg px-2.5 py-1 tracking-widest uppercase ${card.status === 'active' ? 'bg-accent-green/10 text-accent-green' : 'bg-red-500/10 text-red-500'}`}>
+            {card.status}
+          </span>
         </div>
         <p className="text-[13px] text-text-secondary leading-relaxed mb-4 font-medium">
-          Generated dynamic card data refreshed every cycle. Specifically engineered for one-time digital acquisitions and recurring subscriptions.
+          Manage your {card.brand || card.network} secure identity. Your {(card.cardType || 'Virtual').toLowerCase()} card details are protected by Palm recognition and anti-fraud protocols.
         </p>
         <div className="flex flex-wrap gap-2">
-          {["SINGLE USE ONLY", "BURST LIMIT: Rs. 50,000"].map((tag) => (
+          {[`EXPIRY: ${card.expiry}`, `LIMIT: Rs. 50,000`, card.frozen ? "FROZEN" : "ACTIVE"].map((tag) => (
             <span key={tag} className="text-[10px] font-bold text-text-secondary bg-text-primary/5 border border-border-main rounded-lg px-3 py-1.5 font-heading tracking-widest">
               {tag}
             </span>
@@ -84,11 +88,11 @@ function PalmIDPanel() {
     <div className="bg-gradient-to-br from-accent-green/10 to-accent-blue/10 border border-accent-green/20 rounded-2xl p-6 flex flex-col items-center justify-center gap-4 min-w-[200px] shadow-sm text-center">
       <div className="w-16 h-16 rounded-full bg-accent-green/10 border-2 border-accent-green/30 flex items-center justify-center text-3xl">🤚</div>
       <div>
-        <div className="text-[15px] font-bold text-text-primary font-heading uppercase tracking-tight">Palm-ID™ Ready</div>
-        <div className="text-[11px] text-text-secondary mt-1 font-bold font-heading opacity-60">VERIFIED 12M AGO</div>
+        <div className="text-[15px] font-bold text-text-primary font-heading uppercase tracking-tight">Palm Recognition Active</div>
+        <div className="text-[11px] text-text-secondary mt-1 font-bold font-heading opacity-60">LAST VERIFIED 12M AGO</div>
       </div>
       <button className="bg-accent-green/20 border border-accent-green/30 text-accent-green rounded-xl px-5 py-2 text-[11px] font-bold hover:bg-accent-green/30 transition-all font-heading uppercase tracking-widest cursor-pointer">
-        RE-VERIFY
+        UPDATE SCAN
       </button>
     </div>
   );
@@ -96,8 +100,7 @@ function PalmIDPanel() {
 
 export default function Wallet() {
   const { user } = useUser();
-  const { balance, fetchData } = useWalletStore();
-  const [activeCardId, setActiveCardId] = useState(MY_CARDS[0].id);
+  const { balance, fetchData, linkedBanks, cards, activeCardId, setActiveCard } = useWalletStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -110,7 +113,7 @@ export default function Wallet() {
       <div className="bg-bg-card border border-border-main rounded-2xl p-8 lg:p-10 flex flex-col xl:flex-row justify-between items-center gap-8 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent-blue/5 rounded-full blur-[100px] -mr-32 -mt-32" />
         <div className="relative z-10 text-center xl:text-left">
-          <div className="text-[11px] text-text-secondary tracking-[0.3em] font-bold uppercase font-heading">CUMULATIVE VAULT VALUE</div>
+          <div className="text-[11px] text-text-secondary tracking-[0.3em] font-bold uppercase font-heading">TOTAL WALLET BALANCE</div>
           <div className="text-4xl lg:text-6xl font-bold text-text-primary tracking-tighter my-3 font-heading">Rs. {balance.toLocaleString()}</div>
           <div className="flex items-center justify-center xl:justify-start gap-4">
             <span className="flex items-center gap-1.5 text-[12px] font-bold text-accent-green bg-accent-green/12 rounded-lg px-2.5 py-1 shadow-sm whitespace-nowrap">↑ +2.4%</span>
@@ -124,21 +127,21 @@ export default function Wallet() {
         {/* Cards */}
         <div className="lg:col-span-2 bg-bg-card border border-border-main rounded-2xl p-6 lg:p-8 shadow-sm">
           <div className="flex justify-between items-center mb-6">
-            <span className="text-[17px] font-bold text-text-primary font-heading tracking-tight">Active Channels</span>
+            <span className="text-[17px] font-bold text-text-primary font-heading tracking-tight">My Cards</span>
             <button className="text-[12px] font-bold text-accent-green hover:underline uppercase tracking-widest font-heading cursor-pointer">Manage</button>
           </div>
           <div className="flex flex-col md:flex-row gap-4">
-            {MY_CARDS.map((card) => (
-              <CardVisual key={card.id} card={card} isActive={activeCardId === card.id} onClick={() => setActiveCardId(card.id)} />
+            {cards.map((card) => (
+              <CardVisual key={card.id} card={card} isActive={activeCardId === card.id} onClick={() => setActiveCard(card.id)} />
             ))}
           </div>
         </div>
 
         {/* Banks */}
         <div className="lg:col-span-1 bg-bg-card border border-border-main rounded-2xl p-6 lg:p-8 shadow-sm">
-          <div className="text-[17px] font-bold text-text-primary mb-6 font-heading tracking-tight">Linked Network</div>
+          <div className="text-[17px] font-bold text-text-primary mb-6 font-heading tracking-tight">Linked Bank Accounts</div>
           <div className="divide-y divide-border-main">
-            {CONNECTED_BANKS.map((bank) => (
+            {linkedBanks.map((bank) => (
               <div key={bank.id} className="flex items-center justify-between py-4 group cursor-pointer">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-accent-blue/10 border border-accent-blue/10 flex items-center justify-center transition-all group-hover:scale-110">
@@ -156,13 +159,13 @@ export default function Wallet() {
             ))}
           </div>
           <button className="w-full mt-6 flex items-center justify-center gap-2 py-4 bg-transparent border border-dashed border-border-main rounded-xl text-text-secondary hover:text-text-primary hover:border-text-primary/30 transition-all text-[11px] font-bold uppercase tracking-widest font-heading cursor-pointer">
-            <Plus size={15} /> Add Link
+            <Plus size={15} /> Add Bank Account
           </button>
         </div>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6">
-        <VirtualCardSettings />
+        <VirtualCardSettings card={cards.find(c => c.id === activeCardId) || cards[0]} />
         <PalmIDPanel />
       </div>
     </div>

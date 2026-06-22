@@ -90,7 +90,7 @@ export default function Send() {
       <div className="flex items-center justify-between px-2">
          <div className="flex items-center gap-2.5">
             <div className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse shadow-[0_0_8px_var(--accent-green)]" />
-            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Connection Active</span>
+            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Connection</span>
          </div>
          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30">P-ID v4.0</span>
       </div>
@@ -100,8 +100,8 @@ export default function Send() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-blue/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
           <div className="mb-10 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading">Vault Transfer</h1>
-            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Authorize disbursement via palm-ID™</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading">Send Money</h1>
+            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Authorize payment using palm recognition</p>
           </div>
 
           {success ? (
@@ -109,10 +109,10 @@ export default function Send() {
               <div className="w-20 h-20 bg-accent-green/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent-green/20 shadow-xl shadow-accent-green/10">
                 <Shield className="text-accent-green w-10 h-10" />
               </div>
-              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Access Granted</h2>
+              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Transfer Successful</h2>
               <p className="text-text-secondary text-[14px] mb-10 font-medium leading-relaxed">
-                Network validated biometric signature.<br />
-                <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> dispatched to<br />
+                Your identity has been verified.<br />
+                <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> sent to<br />
                 <span className="text-accent-blue font-bold uppercase tracking-tight">{users.find(u => u.clerkId === selectedContact)?.name}</span>
               </p>
               <button 
@@ -127,7 +127,7 @@ export default function Send() {
               {/* Contacts Selection */}
               <div>
                 <div className="flex justify-between items-end mb-6 px-1">
-                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Recipient Directory</div>
+                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Recipients</div>
                     <div className="flex gap-4">
                         <button 
                             onClick={() => setIsQRScannerOpen(true)}
@@ -158,7 +158,7 @@ export default function Send() {
 
               {/* Amount Input Section */}
               <div className="bg-text-primary/5 rounded-2xl p-8 sm:p-10 border border-border-main relative overflow-hidden">
-                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-6 block font-heading relative z-10">Transmission Intensity (RS)</label>
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-6 block font-heading relative z-10">Amount (Rs.)</label>
                 <div className="relative flex items-center justify-center z-10">
                   <span className="text-2xl font-bold text-text-secondary/40 mr-4 font-heading">Rs.</span>
                   <input
@@ -209,7 +209,7 @@ export default function Send() {
                 >
                   <div className="flex items-center gap-2.5">
                     {loading ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} 
-                    <span>{loading ? "Processing..." : "Authorize Dispatch"}</span>
+                    <span>{loading ? "Processing..." : "Send Payment"}</span>
                   </div>
                   {!loading && parseFloat(amount) < 100 && <span className="text-[9px] opacity-60">Min Rs. 100</span>}
                 </button>

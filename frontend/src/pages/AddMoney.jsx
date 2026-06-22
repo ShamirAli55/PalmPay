@@ -4,18 +4,27 @@ import { useUser } from "@clerk/clerk-react";
 import { Shield, ChevronRight, CheckCircle2, History, Loader2, Building2, Smartphone } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import PalmScanner from "../components/ui/PalmScanner";
-import { CONNECTED_BANKS } from "../constants/index";
 
 const QUICK_AMOUNTS = [500, 1000, 5000, 10000];
 
 export default function AddMoney() {
   const { user } = useUser();
-  const { balance, addFunds, loading } = useWalletStore();
-  const [selectedSource, setSelectedSource] = useState(CONNECTED_BANKS[0].id);
+  const { balance, addFunds, loading, linkedBanks, fetchData } = useWalletStore();
+  const [selectedSource, setSelectedSource] = useState("");
   const [amount, setAmount] = useState("500.00");
   const [success, setSuccess] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.id) fetchData(user.id);
+  }, [user, fetchData]);
+
+  useEffect(() => {
+    if (linkedBanks.length > 0 && !selectedSource) {
+        setSelectedSource(linkedBanks[0].bankId);
+    }
+  }, [linkedBanks, selectedSource]);
 
   const handleAmountChange = (val) => {
     const cleaned = val.replace(/[^0-9.]/g, "");
@@ -42,11 +51,12 @@ export default function AddMoney() {
 
   const onScanVerified = async (palmImageBlob) => {
     const numAmount = parseFloat(amount);
-    const sourceBank = CONNECTED_BANKS.find(b => b.id === selectedSource)?.name || 'External Bank';
+    const bank = linkedBanks.find(b => b.bankId === selectedSource);
     
     const result = await addFunds(user.id, {
         amount: numAmount,
-        source: sourceBank
+        bankId: selectedSource,
+        source: bank?.name || 'External Bank'
     }, palmImageBlob);
 
     if (result) setSuccess(true);
@@ -58,7 +68,7 @@ export default function AddMoney() {
       <div className="flex items-center justify-between px-2">
          <div className="flex items-center gap-2.5">
             <div className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse shadow-[0_0_8px_var(--accent-blue)]" />
-            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Inbound Synthesis Protocol</span>
+            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Deposit</span>
          </div>
          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30">V-AUTH v2.1</span>
       </div>
@@ -68,8 +78,8 @@ export default function AddMoney() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-green/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
           <div className="mb-10 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Capital Synthesis</h1>
-            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Authorize liquidity bridge via biometric pulse</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Add Funds</h1>
+            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Authorize deposit using palm recognition</p>
           </div>
 
           {success ? (
@@ -77,17 +87,17 @@ export default function AddMoney() {
               <div className="w-20 h-20 bg-accent-green/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent-green/20 shadow-xl shadow-accent-green/10">
                 <CheckCircle2 className="text-accent-green w-10 h-10" />
               </div>
-              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Synthesis Success</h2>
+              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Deposit Successful</h2>
               <p className="text-text-secondary text-[14px] mb-10 font-medium leading-relaxed">
-                Liquidity bridge established.<br />
-                <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> synthesized from<br />
-                <span className="text-accent-blue font-bold uppercase tracking-tight">{CONNECTED_BANKS.find(b => b.id === selectedSource)?.name}</span>
+                Your funds have been added successfully.<br />
+                <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> added from<br />
+                <span className="text-accent-blue font-bold uppercase tracking-tight">{linkedBanks.find(b => b.bankId === selectedSource)?.name}</span>
               </p>
               <button 
                 onClick={() => navigate("/dashboard")}
                 className="w-full sm:w-64 px-10 py-4 bg-accent-blue text-white rounded-xl font-bold hover:brightness-110 transition-all active:scale-95 shadow-xl shadow-accent-blue/20 font-heading uppercase tracking-widest text-[11px]"
               >
-                View Vault Balance
+                View Wallet Balance
               </button>
             </div>
           ) : (
@@ -95,24 +105,25 @@ export default function AddMoney() {
               {/* Linked Sources Selection */}
               <div>
                 <div className="flex justify-between items-end mb-6 px-1">
-                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Funding Architecture</div>
-                    <button className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125">LINK NEW BANK</button>
+                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Select Source</div>
+                    <button className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125">ADD BANK ACCOUNT</button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {CONNECTED_BANKS.map((bank) => (
+                  {linkedBanks.map((bank) => (
                     <button
-                      key={bank.id}
-                      onClick={() => setSelectedSource(bank.id)}
-                      className={`flex flex-col items-center gap-3 p-4 rounded-xl transition-all border relative overflow-hidden group ${selectedSource === bank.id ? "bg-accent-blue/5 border-accent-blue shadow-lg" : "bg-text-primary/5 border-border-main hover:border-text-primary/20"}`}
+                      key={bank.bankId}
+                      onClick={() => setSelectedSource(bank.bankId)}
+                      className={`flex flex-col items-center gap-3 p-4 rounded-xl transition-all border relative overflow-hidden group ${selectedSource === bank.bankId ? "bg-accent-blue/5 border-accent-blue shadow-lg" : "bg-text-primary/5 border-border-main hover:border-text-primary/20"}`}
                     >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${selectedSource === bank.id ? "bg-accent-blue text-white" : "bg-text-primary/10 text-text-secondary"}`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${selectedSource === bank.bankId ? "bg-accent-blue text-white" : "bg-text-primary/10 text-text-secondary"}`}>
                          <Building2 size={18} />
                       </div>
                       <div className="text-center overflow-hidden w-full">
-                         <div className={`text-[11px] font-bold truncate uppercase tracking-tight ${selectedSource === bank.id ? "text-text-primary" : "text-text-secondary"}`}>{bank.name}</div>
+                         <div className={`text-[11px] font-bold truncate uppercase tracking-tight ${selectedSource === bank.bankId ? "text-text-primary" : "text-text-secondary"}`}>{bank.name}</div>
                          <div className="text-[9px] text-text-secondary/50 font-bold tracking-widest mt-0.5">•• {bank.last4}</div>
+                         <div className="text-[10px] font-bold text-accent-green mt-1">Rs. {bank.balance.toLocaleString()}</div>
                       </div>
-                      {selectedSource === bank.id && (
+                      {selectedSource === bank.bankId && (
                         <div className="absolute top-1.5 right-1.5">
                            <CheckCircle2 size={12} className="text-accent-blue" />
                         </div>
@@ -124,7 +135,7 @@ export default function AddMoney() {
 
               {/* Amount Input Section */}
               <div className="bg-text-primary/5 rounded-2xl p-8 sm:p-10 border border-border-main relative overflow-hidden">
-                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-6 block font-heading relative z-10">Synthesis Volume (RS)</label>
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-6 block font-heading relative z-10">Amount (RS)</label>
                 <div className="relative flex items-center justify-center z-10">
                   <span className="text-2xl font-bold text-text-secondary/40 mr-4 font-heading">Rs.</span>
                   <input
@@ -157,7 +168,7 @@ export default function AddMoney() {
                 >
                   <div className="flex items-center gap-2.5">
                     {loading ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} 
-                    <span>{loading ? "Synthesizing..." : "Initiate Synthesis"}</span>
+                    <span>{loading ? "Adding funds..." : "Confirm Deposit"}</span>
                   </div>
                   {!loading && parseFloat(amount) < 100 && <span className="text-[9px] opacity-60">Min Rs. 100</span>}
                 </button>

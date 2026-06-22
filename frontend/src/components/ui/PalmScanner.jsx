@@ -8,7 +8,7 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [scanning, setScanning] = useState(false);
-  const [status, setStatus] = useState("Setup Scanning Environment");
+  const [status, setStatus] = useState("Preparing Camera...");
   const [instruction, setInstruction] = useState("Center your palm with fingers spread");
   const [guideColor, setGuideColor] = useState("var(--accent-blue)"); 
   const [scanProgress, setScanProgress] = useState(0);
@@ -42,11 +42,11 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
       });
       setStream(mediaStream);
       if (videoRef.current) videoRef.current.srcObject = mediaStream;
-      setStatus("Sensor Calibration...");
-      setTimeout(() => setStatus("Ready to Scan"), 800);
+      setStatus("Finishing setup...");
+      setTimeout(() => setStatus("Ready"), 800);
     } catch (err) {
       setStatus("Camera Access Failed");
-      setInstruction(`Error: ${err.name}. Protocol requires Camera.`);
+      setInstruction(`Error: ${err.name}. Please allow camera access.`);
     }
   };
 
@@ -85,7 +85,7 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     if (!stream || scanning || !user) return;
     setScanning(true);
     setGuideColor("var(--accent-green)");
-    setInstruction("Analyzing dermal ridges... Don't move");
+    setInstruction("Scanning palm... Don't move");
     
     const startTime = Date.now();
     const duration = 2500;
@@ -111,8 +111,8 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
 
         if (success) {
             setIsSuccess(true);
-            setStatus("Authorization Success");
-            setInstruction("Bio-signature verified");
+            setStatus("Success");
+            setInstruction("Identity verified");
             setTimeout(() => {
                 onVerified(imageBlob);
                 onClose();
@@ -151,8 +151,8 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
                 <Scan className="w-5 h-5 text-accent-blue" />
               </div>
               <div>
-                <div className="text-[14px] font-bold text-text-primary leading-tight font-heading uppercase tracking-tighter italic">PALM-SCANNER™</div>
-                <div className="text-[9px] font-bold text-text-secondary tracking-[0.2em] uppercase font-heading">{mode === 'enroll' ? 'MASTER REGISTRY' : 'SECURE VAULT ACCESS'}</div>
+                <div className="text-[14px] font-bold text-text-primary leading-tight font-heading uppercase tracking-tighter italic">PALM RECOGNITION</div>
+                <div className="text-[9px] font-bold text-text-secondary tracking-[0.2em] uppercase font-heading">{mode === 'enroll' ? 'Enrollment' : 'Secure Access'}</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -220,7 +220,7 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
           <div className="p-8 pt-2 text-center">
             <p className={`text-[14px] font-bold mb-1 transition-colors font-heading ${status === 'Verification Failed' ? 'text-accent-red' : 'text-text-primary'}`}>{instruction}</p>
             <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mb-8 opacity-50 font-heading">
-                {facingMode === 'user' ? "FRONT SENSOR ACTIVE" : "BACK SENSOR ACTIVE"}
+                {facingMode === 'user' ? "FRONT CAMERA ACTIVE" : "BACK CAMERA ACTIVE"}
             </p>
 
             {!scanning && !isSuccess ? (
@@ -230,12 +230,12 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
                     className="w-full h-16 bg-accent-blue hover:brightness-110 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 group relative shadow-xl shadow-accent-blue/20"
                 >
                     {enrolling || verifying ? <Loader2 className="w-6 h-6 animate-spin text-white/50" /> : <ShieldCheck className="w-6 h-6 text-white" />}
-                    <span className="text-white font-bold italic tracking-tight uppercase font-heading">{mode === 'enroll' ? 'Begin Registration' : 'Authorize Payload'}</span>
+                    <span className="text-white font-bold italic tracking-tight uppercase font-heading">{mode === 'enroll' ? 'Start Scanning' : 'Authorize'}</span>
                 </button>
             ) : (
                 <div className="w-full space-y-4">
                     <div className="flex justify-between text-[10px] font-bold text-text-secondary uppercase tracking-[0.3em] font-heading">
-                        <span>Scanning Ridges...</span>
+                        <span>Scanning...</span>
                         <span>{Math.round(scanProgress)}%</span>
                     </div>
                     <div className="w-full h-2 bg-text-primary/5 rounded-full overflow-hidden border border-border-main">

@@ -17,33 +17,16 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
-// ── Mock Data ────────────────────────────────────────────────────────────────
-const AREA_DATA = [
-  { name: "Mon", income: 4000, spending: 2400 },
-  { name: "Tue", income: 3000, spending: 1398 },
-  { name: "Wed", income: 2000, spending: 9800 },
-  { name: "Thu", income: 2780, spending: 3908 },
-  { name: "Fri", income: 1890, spending: 4800 },
-  { name: "Sat", income: 2390, spending: 3800 },
-  { name: "Sun", income: 3490, spending: 4300 },
-];
-
-const PIE_DATA = [
-  { name: "Shopping", value: 400, color: "var(--accent-blue)" },
-  { name: "Rent", value: 300, color: "#6366f1" },
-  { name: "Dining", value: 300, color: "#8b5cf6" },
-  { name: "Utils", value: 200, color: "#ec4899" },
-];
-
 // ── Analytics Component ──────────────────────────────────────────────────────
 export default function Analytics() {
   const { user } = useUser();
-  const { transactions, fetchData } = useWalletStore();
+  const { transactions, fetchData, getAnalyticsData } = useWalletStore();
 
   useEffect(() => {
     if (user) fetchData(user.id);
   }, [user, fetchData]);
 
+  const { areaData, pieData } = getAnalyticsData();
   const totalIncome = transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
   const totalSpend = Math.abs(transactions.filter(t => t.type === 'debit').reduce((acc, t) => acc + t.amount, 0));
   const netSavings = totalIncome - totalSpend;
@@ -94,7 +77,7 @@ export default function Analytics() {
         </div>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={AREA_DATA}>
+            <AreaChart data={areaData}>
               <defs>
                 <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.2} />
@@ -138,8 +121,8 @@ export default function Analytics() {
             <div className="h-[220px] w-[220px] shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={PIE_DATA} innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
-                    {PIE_DATA.map((entry, index) => (
+                  <Pie data={pieData} innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
+                    {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -148,11 +131,11 @@ export default function Analytics() {
               </ResponsiveContainer>
             </div>
             <div className="flex-1 w-full grid grid-cols-1 gap-4">
-              {PIE_DATA.map((item) => (
+              {pieData.map((item) => (
                 <div key={item.name} className="flex items-center gap-3 p-2 rounded-xl hover:bg-text-primary/5 transition-all">
                   <div className="w-3 h-3 rounded-full" style={{ background: item.color }} />
                   <span className="text-[12px] text-text-secondary font-bold font-heading">{item.name}</span>
-                  <span className="text-[12px] text-text-primary font-bold ml-auto font-heading">{item.value}%</span>
+                  <span className="text-[12px] text-text-primary font-bold ml-auto font-heading">Rs. {item.value.toLocaleString()}</span>
                 </div>
               ))}
             </div>

@@ -1,9 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '../api';
 import { toast } from 'sonner';
-
-// Unified simple API URL for both local and mobile testing
-const API_URL = `http://${window.location.hostname}:5000/api`;
 
 export const usePalmStore = create((set) => ({
     enrolling: false,
@@ -13,7 +10,7 @@ export const usePalmStore = create((set) => ({
 
     fetchPalmStatus: async (clerkId) => {
         try {
-            const res = await axios.get(`${API_URL}/user/${clerkId}`);
+            const res = await api.get(`/users/${clerkId}`);
             set({ palmEnrolled: res.data.palmEnrolled });
         } catch (err) {
             console.error('Fetch palm status error:', err);
@@ -27,7 +24,7 @@ export const usePalmStore = create((set) => ({
         formData.append('clerkId', clerkId);
 
         try {
-            const res = await axios.post(`${API_URL}/palm/enroll`, formData);
+            const res = await api.post(`/palm/enroll`, formData);
             set({ enrolling: false, enrollSamples: res.data.samples });
             if (res.data.status === 'enrolled') {
                 set({ palmEnrolled: true });
@@ -48,7 +45,7 @@ export const usePalmStore = create((set) => ({
         formData.append('clerkId', clerkId);
 
         try {
-            const res = await axios.post(`${API_URL}/palm/verify`, formData);
+            const res = await api.post(`/palm/verify`, formData);
             set({ verifying: false });
             if (res.data.accepted) {
                 toast.success('Palm verified!', { id: 'palm-verify-success' });

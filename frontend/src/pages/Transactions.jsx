@@ -79,8 +79,8 @@ export default function Transactions() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary m-0 tracking-tight font-heading">Vault Ledger</h1>
-          <p className="text-sm text-text-secondary mt-2">Manage and review your comprehensive wealth movement log.</p>
+          <h1 className="text-3xl font-bold text-text-primary m-0 tracking-tight font-heading">Transaction History</h1>
+          <p className="text-sm text-text-secondary mt-2">View and manage your recent transactions.</p>
         </div>
         <div className="flex gap-2.5 shrink-0">
           <button
@@ -114,11 +114,7 @@ export default function Transactions() {
           />
         </div>
 
-        {/* Date range */}
-        <div className="flex items-center gap-3 bg-text-primary/5 border border-border-main rounded-xl px-4 py-3 w-full md:w-auto">
-          <Calendar size={14} className="text-text-secondary" />
-          <span className="text-[12px] text-text-secondary font-bold font-heading">Protocol Date: Current Quarter</span>
-        </div>
+
 
         {/* Frequent avatars */}
         <div className="hidden xl:flex items-center gap-3 ml-auto">
@@ -132,7 +128,7 @@ export default function Transactions() {
               +12
             </div>
           </div>
-          <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest">Active Channels</span>
+          <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest">Recent Contacts</span>
         </div>
       </div>
 
@@ -140,7 +136,7 @@ export default function Transactions() {
       <div className="bg-bg-card border border-border-main rounded-xl overflow-hidden shadow-sm overflow-x-auto no-scrollbar">
         <div className="min-w-[800px]">
             <div className="grid grid-cols-[2fr_1fr_1.2fr_1fr_1fr] px-6 py-4 border-b border-border-main bg-text-primary/2">
-            {["ENTITY", "CATEGORY", "DATETIME", "STATUS", "MAGNITUDE"].map((col) => (
+            {["RECIPIENT", "CATEGORY", "DATE & TIME", "STATUS", "AMOUNT"].map((col) => (
                 <div key={col} className="text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 cursor-pointer hover:text-text-primary transition-colors font-heading">
                 {col}
                 <ArrowUpDown size={12} className="text-text-secondary/30" />
@@ -163,7 +159,7 @@ export default function Transactions() {
                     <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
                     <div className="min-w-0">
                         <div className="text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
-                        <div className="text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Digital Settlement"}</div>
+                        <div className="text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Transfer"}</div>
                     </div>
                     </div>
 
@@ -199,7 +195,7 @@ export default function Transactions() {
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-6 py-4 px-2">
         <span className="text-[12px] text-text-secondary font-bold font-heading">
-          PROTOCOL LOGS: {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)} – {Math.min(page * PAGE_SIZE, filtered.length)} OF {filtered.length} ENTRIES
+          TRANSACTIONS: {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)} – {Math.min(page * PAGE_SIZE, filtered.length)} OF {filtered.length} RESULTS
         </span>
         
         <div className="flex items-center gap-2">

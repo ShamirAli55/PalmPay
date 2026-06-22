@@ -1,19 +1,22 @@
 import { create } from "zustand";
-import axios from 'axios';
+import api from '../api';
 import { toast } from 'sonner';
 import { SPENDING_CHART, MY_CARDS } from "../constants/index";
 
-const API_URL = `http://${window.location.hostname}:5000/api`;
-
 export const useWalletStore = create((set, get) => ({
-  balance: 12450.0,
+  balance: 0,
   transactions: [],
   users: [],
+  linkedBanks: [],
+  cards: [],
+  activeCardId: null,
+  trustedDevices: [],
+  securityEvents: [],
   loading: false,
 
   fetchUsers: async () => {
     try {
-        const res = await axios.get(`${API_URL}/users`);
+        const res = await api.get(`/users`);
         set({ users: res.data });
     } catch (err) {
         console.error('Fetch users error:', err);
@@ -21,16 +24,24 @@ export const useWalletStore = create((set, get) => ({
   },
 
   fetchData: async (clerkId) => {
-    if (!clerkId) return;
+    if (!clerkId || get().loading) return;
     set({ loading: true });
     try {
         const [userRes, transRes] = await Promise.all([
-            axios.get(`${API_URL}/user/${clerkId}`),
-            axios.get(`${API_URL}/transactions/${clerkId}`)
+            api.get(`/users/${clerkId}`),
+            api.get(`/transactions/${clerkId}`)
         ]);
         set({ 
-            balance: userRes.data.balance, 
-            transactions: transRes.data,
+            balance: userRes.data.balance || 0, 
+            transactions: transRes.data || [],
+            linkedBanks: userRes.data.linkedBanks || [],
+            cards: (userRes.data.cards || []).map(c => ({
+              ...c,
+              network: c.brand || 'VISA' // Map brand to network for UI
+            })),
+            activeCardId: userRes.data.cards?.[0]?.id || null,
+            trustedDevices: userRes.data.trustedDevices || [],
+            securityEvents: userRes.data.securityEvents || [],
             loading: false 
         });
     } catch (err) {
@@ -52,7 +63,7 @@ export const useWalletStore = create((set, get) => ({
         value: `Rs. ${balance.toLocaleString()}`,
         change: "+5.2%", // Mock trend for now
         changePositive: true,
-        sub: "Real-time sync active",
+        sub: "Updated just now",
         icon: "trending-up",
         showChart: true
       },
@@ -60,7 +71,7 @@ export const useWalletStore = create((set, get) => ({
         id: "monthly-spend",
         label: "MONTHLY SPEND",
         value: `Rs. ${spend.toLocaleString()}`,
-        sub: `${Math.min(99, Math.round(spend/1000 * 100))}% of threshold`,
+        sub: `${Math.min(99, Math.round(spend/1000 * 100))}% of budget`,
         icon: "credit-card",
         showProgress: true,
         progress: Math.min(100, Math.round(spend/1000 * 100))
@@ -75,14 +86,21 @@ export const useWalletStore = create((set, get) => ({
       },
       {
         id: "active-auth",
-        label: "BIO-SECURITY",
+        label: "SECURITY",
         value: "READY",
-        sub: "Palm-ID™ Identity Active",
+        sub: "Palm Recognition Active",
         icon: "target",
         showProgress: true,
         progress: 100
       }
     ];
+  },
+
+  getFinancialSummary: () => {
+    const { transactions } = get();
+    const income = transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
+    const spend = Math.abs(transactions.filter(t => t.type === 'debit').reduce((acc, t) => acc + t.amount, 0));
+    return { income, spend };
   },
 
   getChartData: () => {
@@ -107,9 +125,54 @@ export const useWalletStore = create((set, get) => ({
 
     return {
         week: dailyData,
-        month: SPENDING_CHART.month, // Keep static for now or refine later
+        month: SPENDING_CHART.month,
         year: SPENDING_CHART.year
     };
+  },
+
+  getAnalyticsData: () => {
+    const { transactions } = get();
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const currentDay = new Date().getDay();
+    
+    // Last 7 days overview
+    const areaData = days.map((name, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - ((currentDay - i + 7) % 7));
+        const dayStart = new Date(date.setHours(0,0,0,0));
+        const dayEnd = new Date(date.setHours(23,59,59,999));
+        
+        const income = transactions.filter(t => {
+            const tDate = new Date(t.date);
+            return tDate >= dayStart && tDate <= dayEnd && t.type === 'credit';
+        }).reduce((acc, t) => acc + t.amount, 0);
+
+        const spending = Math.abs(transactions.filter(t => {
+            const tDate = new Date(t.date);
+            return tDate >= dayStart && tDate <= dayEnd && t.type === 'debit';
+        }).reduce((acc, t) => acc + t.amount, 0));
+
+        return { name, income, spending };
+    });
+
+    // Category breakdown
+    const categories = [...new Set(transactions.map(t => t.category || "Other"))];
+    const categoryColors = {
+        Shopping: "var(--accent-blue)",
+        Rent: "#6366f1",
+        Dining: "#8b5cf6",
+        Utils: "#ec4899",
+        Deposit: "#22c55e",
+        Transfer: "#f97316",
+        Other: "#94a3b8"
+    };
+
+    const pieData = categories.map(cat => {
+        const value = Math.abs(transactions.filter(t => (t.category || "Other") === cat).reduce((acc, t) => acc + t.amount, 0));
+        return { name: cat, value, color: categoryColors[cat] || categoryColors.Other };
+    }).filter(c => c.value > 0);
+
+    return { areaData, pieData };
   },
 
   sendMoney: async (clerkId, data, palmImageBlob) => {
@@ -124,17 +187,17 @@ export const useWalletStore = create((set, get) => ({
     formData.append('palm_image', palmImageBlob, 'auth.jpg');
 
     try {
-        const res = await axios.post(`${API_URL}/transactions/create`, formData);
+        const res = await api.post(`/transactions/create`, formData);
         set((state) => ({
             balance: res.data.balance,
             transactions: [res.data.transaction, ...state.transactions],
             loading: false
         }));
-        toast.success('Transaction Successful!', { id: 'txn-success' });
+        toast.success('Transfer Successful!', { id: 'txn-success' });
         return true;
     } catch (err) {
         set({ loading: false });
-        const msg = err.response?.data?.message || 'Transaction Security Failure';
+        const msg = err.response?.data?.message || 'Transaction failed';
         toast.error(msg, { id: 'txn-error' });
         return false;
     }
@@ -143,29 +206,29 @@ export const useWalletStore = create((set, get) => ({
     set({ loading: true });
     const formData = new FormData();
     formData.append('clerkId', clerkId);
+    formData.append('bankId', data.bankId);
     formData.append('amount', data.amount);
     formData.append('source', data.source || 'Bank Link');
     formData.append('palm_image', palmImageBlob, 'auth.jpg');
 
     try {
-        const res = await axios.post(`${API_URL}/wallet/add-funds`, formData);
+        const res = await api.post(`/transactions/add-funds`, formData);
         set((state) => ({
             balance: res.data.balance,
             transactions: [res.data.transaction, ...state.transactions],
+            linkedBanks: res.data.linkedBanks || state.linkedBanks,
             loading: false
         }));
-        toast.success('Funds Synthesized!', { id: 'add-success' });
+        toast.success('Funds added successfully!', { id: 'add-success' });
         return true;
     } catch (err) {
         set({ loading: false });
-        const msg = err.response?.data?.message || 'Synthesis Error';
+        const msg = err.response?.data?.message || 'Deposit Error';
         toast.error(msg, { id: 'add-error' });
         return false;
     }
   },
 
-  cards: MY_CARDS,
-  activeCardId: MY_CARDS[0].id,
   setActiveCard: (id) => set({ activeCardId: id }),
   getActiveCard: () => {
     const state = get();

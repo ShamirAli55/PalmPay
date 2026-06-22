@@ -109,7 +109,7 @@ export default function Sidebar() {
             className="flex items-center gap-[9px] px-[11px] py-2.5 rounded-lg text-[13px] text-accent-red bg-transparent border-none cursor-pointer w-full text-left font-bold transition-colors hover:bg-accent-red/10 font-heading"
           >
             <LogOut size={15} />
-            Exit Platform
+            Logout
           </button>
         </nav>
 
