@@ -26,7 +26,11 @@ export default function Analytics() {
     if (user) fetchData(user.id);
   }, [user, fetchData]);
 
-  const { areaData, pieData } = getAnalyticsData();
+  const { areaData, pieData: rawPieData } = getAnalyticsData();
+  
+  // Sort data by highest expense first for accurate intelligence
+  const pieData = [...rawPieData].sort((a, b) => b.value - a.value);
+
   const totalIncome = transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
   const totalSpend = Math.abs(transactions.filter(t => t.type === 'debit').reduce((acc, t) => acc + t.amount, 0));
   const netSavings = totalIncome - totalSpend;
@@ -142,17 +146,49 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Forecast / Net Trend */}
-        <div className="bg-bg-card border border-border-main rounded-xl p-8 flex flex-col justify-center items-center text-center gap-4 relative overflow-hidden">
+        {/* Financial Intelligence Panel */}
+        <div className="bg-bg-card border border-border-main rounded-xl p-8 flex flex-col gap-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/5 rounded-full blur-3xl -mr-10 -mt-10" />
-          <div className="w-16 h-16 bg-accent-blue/10 rounded-[1.5rem] flex items-center justify-center mb-2 z-10">
-            <TrendingUp size={28} className="text-accent-blue" />
+          
+          <div className="flex items-center justify-between z-10">
+            <div>
+              <h3 className="text-[15px] font-bold text-text-primary m-0 font-heading">Financial Intelligence</h3>
+              <p className="text-[11px] text-text-secondary mt-1 font-medium">Real-time category limit tracking</p>
+            </div>
+            <div className={`p-2 rounded-lg ${netSavings > 0 ? "bg-accent-green/10" : "bg-accent-red/10"}`}>
+               {netSavings > 0 ? <TrendingUp size={18} className="text-accent-green" /> : <TrendingDown size={18} className="text-accent-red" />}
+            </div>
           </div>
-          <h3 className="text-lg font-bold text-text-primary m-0 font-heading z-10">Savings Projection</h3>
-          <p className="text-[13px] text-text-secondary leading-relaxed max-w-[280px] font-medium z-10">Based on your activity, we expect a <span className="text-accent-green font-bold">12% boost</span> in your capital reserves by next billing cycle.</p>
-          <button className="mt-4 px-8 py-3 bg-text-primary/5 border border-border-main rounded-xl text-text-primary text-[11px] font-extrabold hover:bg-text-primary/10 transition-all uppercase tracking-widest font-heading z-10">
-            Export Forecast
-          </button>
+
+          <div className="flex flex-col gap-6 z-10">
+            {pieData.slice(0, 3).map((item, i) => {
+              const percentage = ((item.value / totalSpend) * 100).toFixed(0);
+              return (
+                <div key={item.name} className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider">
+                    <span className="text-text-primary">{item.name}</span>
+                    <span className="text-text-secondary">{percentage}% of budget</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-text-primary/5 rounded-full overflow-hidden border border-border-main/50">
+                    <div 
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ 
+                        width: `${percentage}%`, 
+                        backgroundColor: item.color,
+                        boxShadow: `0 0 10px ${item.color}33`
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-auto z-10 p-5 bg-text-primary/5 rounded-2xl border border-border-main/50 border-dashed">
+            <p className="text-[13px] text-text-secondary leading-relaxed m-0 font-medium italic">
+              "System Analysis: Your <span className="text-text-primary font-bold">{pieData[0]?.name}</span> category accounts for <span className="text-accent-red font-bold">{((pieData[0]?.value / totalSpend) * 100).toFixed(1)}%</span> of your total spending. Reining this in by just 10% would add <span className="text-accent-green font-bold">Rs. {Math.round(pieData[0]?.value * 0.1).toLocaleString()}</span> back to your available balance."
+            </p>
+          </div>
         </div>
       </div>
     </div>

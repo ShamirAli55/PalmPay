@@ -108,8 +108,8 @@ export const useWalletStore = create((set, get) => ({
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const currentDay = new Date().getDay();
     
-    // Sort transactions by day for the last 7 days
-    const dailyData = days.map((day, i) => {
+    // 7-day Weekly Trend (Locked to actual data)
+    const week = days.map((day, i) => {
         const date = new Date();
         date.setDate(date.getDate() - ((currentDay - i + 7) % 7));
         const dayStart = new Date(date.setHours(0,0,0,0));
@@ -120,14 +120,28 @@ export const useWalletStore = create((set, get) => ({
             return tDate >= dayStart && tDate <= dayEnd && t.type === 'debit';
         }).reduce((acc, t) => acc + t.amount, 0));
 
-        return { day, amount: daySpend || Math.floor(Math.random() * 100) }; // Fallback to random if zero just for better visuals during testing
+        return { day, amount: daySpend }; 
     });
 
-    return {
-        week: dailyData,
-        month: SPENDING_CHART.month,
-        year: SPENDING_CHART.year
-    };
+    // Dynamic Monthly Trend (Aggregated by Weeks)
+    const monthLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    const month = monthLabels.map((name, i) => {
+        const weekIncome = transactions.filter(t => {
+            const tDate = new Date(t.date);
+            const weekNum = Math.floor(tDate.getDate() / 7);
+            return weekNum === i && t.type === 'credit';
+        }).reduce((acc, t) => acc + t.amount, 0);
+
+        const weekSpend = Math.abs(transactions.filter(t => {
+            const tDate = new Date(t.date);
+            const weekNum = Math.floor(tDate.getDate() / 7);
+            return weekNum === i && t.type === 'debit';
+        }).reduce((acc, t) => acc + t.amount, 0));
+
+        return { name, income: weekIncome, spending: weekSpend };
+    });
+
+    return { week, month, year: [] }; // Year can be added similarly by month aggregation 
   },
 
   getAnalyticsData: () => {
