@@ -15,6 +15,10 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
+
 const CATEGORIES = ["All Categories", "Transfer", "Shopping", "Income", "Software", "Technology"];
 const PAGE_SIZE = 5;
 
@@ -33,7 +37,7 @@ const CAT_ICONS = {
 };
 
 function Avatar({ name, color }) {
-  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials = (name || "U").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div 
       className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 border border-border-main"
@@ -72,7 +76,54 @@ export default function Transactions() {
     return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const handleExport = (type) => alert(`Exporting as ${type} to secure storage…`);
+  const handleExport = (type) => {
+    if (type !== "PDF") return;
+    
+    const id = toast.loading("Generating your statement…");
+
+    try {
+        const doc = new jsPDF();
+        const tableColumn = ["Recipient", "Category", "Date", "Status", "Amount"];
+        const tableRows = [];
+
+        filtered.forEach(txn => {
+        const txnData = [
+            txn.recipient || "Incoming",
+            txn.category || "Transfer",
+            formatTxnDate(txn.date),
+            txn.status,
+            `Rs. ${Math.abs(txn.amount).toLocaleString()}`
+        ];
+        tableRows.push(txnData);
+        });
+
+        // Styling
+        doc.setFontSize(22);
+        doc.setTextColor(29, 78, 216); // Brand Blue
+        doc.text("PalmPay Financial Statement", 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated for: ${user?.fullName || "Valued User"}`, 14, 30);
+        doc.text(`Total Transactions: ${filtered.length}`, 14, 35);
+        doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 14, 40);
+
+        autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 50,
+        theme: 'grid',
+        headStyles: { fillColor: [29, 78, 216], textColor: [255, 255, 255] },
+        margin: { top: 50 },
+        });
+
+        doc.save(`PalmPay_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
+        toast.success("Statement downloaded successfully!", { id });
+    } catch (error) {
+        console.error("PDF Export Error:", error);
+        toast.error("Failed to generate PDF. Please try again.", { id });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-1.5 min-h-screen">
@@ -82,26 +133,20 @@ export default function Transactions() {
           <h1 className="text-3xl font-bold text-text-primary m-0 tracking-tight font-heading">Transaction History</h1>
           <p className="text-sm text-text-secondary mt-2">View and manage your recent transactions.</p>
         </div>
-        <div className="flex gap-2.5 shrink-0">
-          <button
-            onClick={() => handleExport("CSV")}
-            className="flex items-center gap-2 py-3 px-5 bg-bg-card border border-border-main rounded-xl text-text-primary text-[11px] font-bold hover:bg-text-primary/5 transition-all uppercase tracking-widest font-heading shadow-sm"
-          >
-            <Download size={14} /> Export CSV
-          </button>
+        <div className="flex w-full sm:w-auto shrink-0">
           <button
             onClick={() => handleExport("PDF")}
-            className="flex items-center gap-2 py-3 px-5 bg-accent-blue rounded-xl text-white text-[11px] font-bold hover:brightness-110 transition-all uppercase tracking-widest font-heading shadow-lg shadow-accent-blue/10"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-6 bg-accent-blue rounded-xl text-white text-[11px] font-bold hover:brightness-110 transition-all uppercase tracking-widest font-heading shadow-lg shadow-accent-blue/10"
           >
-            <FileText size={14} /> Generate PDF
+            <FileText size={14} /> Generate PDF Statement
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-bg-card border border-border-main rounded-xl p-4 flex flex-col md:flex-row items-center gap-4 shadow-sm">
+      {/* Filters & Contacts */}
+      <div className="bg-bg-card border border-border-main rounded-xl p-4 flex flex-col lg:flex-row items-center gap-6 shadow-sm">
         {/* Category filter */}
-        <div className="relative w-full md:w-auto">
+        <div className="relative w-full lg:w-48">
           <select
             value={category}
             onChange={(e) => { setCategory(e.target.value); setPage(1); }}
@@ -114,22 +159,27 @@ export default function Transactions() {
           />
         </div>
 
-
-
-        {/* Frequent avatars */}
-        <div className="hidden xl:flex items-center gap-3 ml-auto">
-          <div className="flex -space-x-2.5">
-            {["AS", "JD", "KL", "MP"].map((ini, i) => (
-              <div key={i} className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-bg-card shadow-sm" style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
-                {ini}
-              </div>
-            ))}
-            <div className="w-8 h-8 rounded-full bg-text-primary/10 border-2 border-bg-card flex items-center justify-center text-[10px] font-bold text-text-secondary shadow-sm">
-              +12
+        {/* Dynamic Scrollable Recent Contacts */}
+        {transactions.length > 0 && (
+          <div className="flex items-center gap-4 w-full lg:w-auto lg:ml-auto">
+             <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest shrink-0">Recent Contacts:</span>
+            <div className="flex -space-x-2 overflow-x-auto no-scrollbar py-2 px-1 flex-1 lg:max-w-[240px]">
+              {[...new Set(transactions.map(t => t.recipient).filter(Boolean))].slice(0, 10).map((name, i) => {
+                const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+                return (
+                  <div 
+                    key={name}
+                    title={name}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-bg-card shadow-sm cursor-pointer transition-all hover:scale-110 hover:z-10 shrink-0" 
+                    style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                  >
+                    {initials}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest">Recent Contacts</span>
-        </div>
+        )}
       </div>
 
       {/* Table container */}
@@ -137,9 +187,8 @@ export default function Transactions() {
         <div className="min-w-[800px]">
             <div className="grid grid-cols-[2fr_1fr_1.2fr_1fr_1fr] px-6 py-4 border-b border-border-main bg-text-primary/2">
             {["RECIPIENT", "CATEGORY", "DATE & TIME", "STATUS", "AMOUNT"].map((col) => (
-                <div key={col} className="text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 cursor-pointer hover:text-text-primary transition-colors font-heading">
+                <div key={col} className="text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading">
                 {col}
-                <ArrowUpDown size={12} className="text-text-secondary/30" />
                 </div>
             ))}
             </div>
@@ -208,23 +257,48 @@ export default function Transactions() {
           </button>
 
           <div className="flex gap-2 mx-4">
-            {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => i + 1).map((p) => (
+            {/* First Page */}
+            {totalPages >= 1 && (
               <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`w-10 h-10 rounded-xl text-xs font-bold transition-all font-heading ${page === p ? "bg-accent-blue text-white shadow-lg" : "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary"}`}
+                onClick={() => setPage(1)}
+                className={`w-10 h-10 rounded-xl text-xs font-bold transition-all font-heading ${page === 1 ? "bg-accent-blue text-white shadow-lg" : "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary"}`}
               >
-                {p}
+                1
               </button>
-            ))}
-            {totalPages > 3 && <span className="flex items-end pb-3 text-text-secondary/30 font-bold">...</span>}
-            {totalPages > 3 && (
-               <button
-                  onClick={() => setPage(totalPages)}
-                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all font-heading ${page === totalPages ? "bg-accent-blue text-white shadow-lg" : "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary"}`}
+            )}
+
+            {/* Start Ellipsis */}
+            {page > 3 && totalPages > 5 && (
+              <span className="flex items-end pb-3 text-text-secondary/30 font-bold px-1">...</span>
+            )}
+
+            {/* Middle Pages */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p !== 1 && p !== totalPages && Math.abs(p - page) <= 1)
+              .map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all font-heading ${page === p ? "bg-accent-blue text-white shadow-lg" : "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary"}`}
                 >
-                  {totalPages}
+                  {p}
                 </button>
+              ))
+            }
+
+            {/* End Ellipsis */}
+            {page < totalPages - 2 && totalPages > 5 && (
+              <span className="flex items-end pb-3 text-text-secondary/30 font-bold px-1">...</span>
+            )}
+
+            {/* Last Page */}
+            {totalPages > 1 && (
+              <button
+                onClick={() => setPage(totalPages)}
+                className={`w-10 h-10 rounded-xl text-xs font-bold transition-all font-heading ${page === totalPages ? "bg-accent-blue text-white shadow-lg" : "bg-bg-card border border-border-main text-text-secondary hover:text-text-primary"}`}
+              >
+                {totalPages}
+              </button>
             )}
           </div>
 
