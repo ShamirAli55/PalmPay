@@ -182,113 +182,100 @@ export default function Send() {
 
                 {/* Contact / bank picker */}
                 <div>
-                  {/* No selection: show quick contacts + banks */}
-                  {!selectedContact && !selectedBank && (
-                    <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-                      {/* Quick contacts horizontal scroll */}
-                      <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
-                        {(users || []).filter(u => u.clerkId !== user?.id).slice(0, 6).map((u) => (
-                          <button
-                            key={u.clerkId}
-                            onClick={() => setSelectedContact(u.clerkId)}
-                            className="flex items-center gap-2 bg-text-primary/5 border border-border-main/50 pr-4 py-2 pl-2 rounded-xl hover:bg-text-primary/10 hover:border-accent-blue/20 transition-all shrink-0 active:scale-95"
-                          >
-                            <div className="w-7 h-7 rounded-full bg-accent-blue/20 flex items-center justify-center text-[10px] font-bold text-accent-blue shrink-0">
-                              {getInitials(u.name)}
-                            </div>
-                            <span className="text-[11px] font-bold text-text-primary uppercase tracking-tight whitespace-nowrap">
-                              {u.name?.split(" ")[0]}
-                            </span>
-                          </button>
-                        ))}
+                  {/* Selection Display */}
+                  {selectedContact && !selectedBank ? (
+                    <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-xl p-4 flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
+                      <div className="w-11 h-11 rounded-full bg-accent-blue/20 flex items-center justify-center text-[14px] font-bold text-accent-blue shrink-0">
+                        {getInitials(users.find(u => u.clerkId === selectedContact)?.name)}
                       </div>
-
-                      {/* Banks */}
-                      {linkedBanks.length > 0 && (
-                        <div className="space-y-2.5">
-                          <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
-                            Withdraw to Bank
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            {linkedBanks.map((bank) => (
-                              <button
-                                key={bank.id}
-                                onClick={() => setSelectedBank(bank.id)}
-                                className="bg-text-primary/5 border border-border-main rounded-xl p-3.5 flex items-center justify-between hover:border-accent-blue/40 hover:bg-text-primary/10 transition-all active:scale-[0.98] group"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-xl bg-bg-card border border-border-main flex items-center justify-center text-text-secondary group-hover:text-accent-blue group-hover:border-accent-blue/20 transition-all shrink-0">
-                                    <Wallet size={16} />
-                                  </div>
-                                  <div className="text-left">
-                                    <div className="text-[12px] font-bold text-text-primary uppercase tracking-tight">{bank.name}</div>
-                                    <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-50">••• {bank.last4}</div>
-                                  </div>
-                                </div>
-                                <ChevronRight size={14} className="text-text-secondary group-hover:text-accent-blue transition-all shrink-0" />
-                              </button>
-                            ))}
-                          </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14px] font-bold text-text-primary truncate">
+                          {users.find(u => u.clerkId === selectedContact)?.name || "Palm User"}
                         </div>
-                      )}
+                        <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-60 truncate">
+                          {users.find(u => u.clerkId === selectedContact)?.phone || "NO PHONE LINKED"}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedContact(null)}
+                        className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : selectedBank ? (
+                    <div className="bg-accent-green/5 border border-accent-green/20 rounded-xl p-4 flex items-center gap-4 relative overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-accent-green/5 rounded-full blur-2xl -mr-12 -mt-12" />
+                      <div className="w-11 h-11 rounded-xl bg-accent-green flex items-center justify-center text-white text-base font-black shadow-md shadow-accent-green/20 relative z-10 shrink-0">
+                        {linkedBanks.find(b => b.id === selectedBank)?.name[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 z-10 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-[14px] font-bold text-text-primary m-0 tracking-tight truncate">
+                            {linkedBanks.find(b => b.id === selectedBank)?.name}
+                          </h3>
+                        </div>
+                        <p className="text-[10px] text-text-secondary mt-0.5 font-bold uppercase tracking-widest opacity-60">
+                          ••• {linkedBanks.find(b => b.id === selectedBank)?.last4}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedBank(null)}
+                        className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1 z-10"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar animate-in fade-in duration-300">
+                      {(users || []).filter(u => u.clerkId !== user?.id).slice(0, 6).map((u) => (
+                        <button
+                          key={u.clerkId}
+                          onClick={() => setSelectedContact(u.clerkId)}
+                          className="flex items-center gap-2 bg-text-primary/5 border border-border-main/50 pr-4 py-2 pl-2 rounded-xl hover:bg-text-primary/10 hover:border-accent-blue/20 transition-all shrink-0 active:scale-95"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-accent-blue/20 flex items-center justify-center text-[10px] font-bold text-accent-blue shrink-0">
+                            {getInitials(u.name)}
+                          </div>
+                          <span className="text-[11px] font-bold text-text-primary uppercase tracking-tight whitespace-nowrap">
+                            {u.name?.split(" ")[0] || "User"}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   )}
 
-                  {/* Selected contact preview */}
-                  {selectedContact && !selectedBank && (() => {
-                    const contact = (users || []).find(u => u.clerkId === selectedContact);
-                    if (!contact) return null;
-                    return (
-                      <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-xl p-4 flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
-                        <div className="w-11 h-11 rounded-full bg-accent-blue/20 flex items-center justify-center text-[14px] font-bold text-accent-blue shrink-0">
-                          {getInitials(contact.name)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[14px] font-bold text-text-primary truncate">{contact.name}</div>
-                          <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-60 truncate">
-                            {contact.phone || contact.clerkId?.slice(0, 16) + "…"}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setSelectedContact(null)}
-                          className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1"
-                        >
-                          Change
-                        </button>
+                  {/* Always show Banks below if no bank is selected (Linked Account Section) */}
+                  {!selectedBank && linkedBanks.length > 0 && (
+                    <div className="space-y-2.5 mt-6 pt-6 border-t border-white/5">
+                      <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+                        Withdraw to Linked Bank
                       </div>
-                    );
-                  })()}
-
-                  {/* Selected bank preview */}
-                  {selectedBank && (() => {
-                    const bank = linkedBanks.find(b => b.id === selectedBank);
-                    if (!bank) return null;
-                    return (
-                      <div className="bg-accent-green/5 border border-accent-green/20 rounded-xl p-4 flex items-center gap-4 relative overflow-hidden animate-in slide-in-from-top-2 duration-300">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-accent-green/5 rounded-full blur-2xl -mr-12 -mt-12" />
-                        <div className="w-11 h-11 rounded-xl bg-accent-green flex items-center justify-center text-white text-base font-black shadow-md shadow-accent-green/20 relative z-10 shrink-0">
-                          {bank.name[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1 z-10 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="text-[14px] font-bold text-text-primary m-0 tracking-tight truncate">{bank.name}</h3>
-                            <div className="w-3.5 h-3.5 bg-accent-green rounded-full flex items-center justify-center shrink-0">
-                              <Shield size={8} className="text-white" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {linkedBanks.map((bank) => (
+                          <button
+                            key={bank.id}
+                            onClick={() => {
+                              setSelectedBank(bank.id);
+                              setSelectedContact(null);
+                            }}
+                            className="bg-text-primary/5 border border-border-main rounded-xl p-3.5 flex items-center justify-between hover:border-accent-blue/40 hover:bg-text-primary/10 transition-all active:scale-[0.98] group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-bg-card border border-border-main flex items-center justify-center text-text-secondary group-hover:text-accent-blue group-hover:border-accent-blue/20 transition-all shrink-0">
+                                <Wallet size={16} />
+                              </div>
+                              <div className="text-left">
+                                <div className="text-[12px] font-bold text-text-primary uppercase tracking-tight">{bank.name}</div>
+                                <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-50">••• {bank.last4}</div>
+                              </div>
                             </div>
-                          </div>
-                          <p className="text-[10px] text-text-secondary mt-0.5 font-bold uppercase tracking-widest opacity-60">
-                            ••• {bank.last4}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedBank(null)}
-                          className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1 z-10"
-                        >
-                          Change
-                        </button>
+                            <ChevronRight size={14} className="text-text-secondary group-hover:text-accent-blue transition-all shrink-0" />
+                          </button>
+                        ))}
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
                 </div>
               </div>
 

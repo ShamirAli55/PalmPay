@@ -114,7 +114,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      fetchData(user.id);
+      fetchData(user.id, user.fullName);
       fetchPalmStatus(user.id);
     }
   }, [user, fetchData, fetchPalmStatus]);

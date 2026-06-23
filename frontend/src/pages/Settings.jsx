@@ -2,22 +2,16 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import {
-  User, Bell, Shield, Palette, Globe, CreditCard,
-  ChevronRight, Camera, Check, Moon, Sun,
-  Fingerprint, Smartphone, Key, AlertTriangle, CheckCircle, Lock, Eye, EyeOff,
-  Scan, Loader2, LogOut, ShieldCheck, ShieldOff, Clock
+  User, Bell, Shield, CreditCard,
+  ChevronRight, Camera, Moon, Sun,
+  Fingerprint, Lock,
+  Scan, Loader2, LogOut, ShieldCheck, ShieldOff
 } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import { usePalmStore } from "../store/palmStore";
 import PalmScanner from "../components/ui/PalmScanner";
 
 const TABS = ["General", "Security"];
-
-const DEVICES = [
-  { id: "d1", name: "iPhone 15 Pro", type: "Mobile", lastActive: "2 min ago", trusted: true },
-  { id: "d2", name: "MacBook Pro M3", type: "Desktop", lastActive: "1 hour ago", trusted: true },
-  { id: "d3", name: "Chrome · Windows", type: "Browser", lastActive: "3 days ago", trusted: false },
-];
 
 function SectionCard({ title, subtitle, children }) {
   return (
@@ -63,7 +57,6 @@ function Toggle({ on, onChange }) {
 function SecurityTab() {
   const { user } = useUser();
   const { palmEnrolled, fetchPalmStatus } = usePalmStore();
-  const [showKey, setShowKey] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
@@ -80,11 +73,10 @@ function SecurityTab() {
 
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6">
           {/* Icon */}
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border ${
-            palmEnrolled
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border ${palmEnrolled
               ? 'bg-accent-green/10 border-accent-green/20'
               : 'bg-accent-red/10 border-accent-red/20'
-          }`}>
+            }`}>
             {palmEnrolled
               ? <ShieldCheck className="w-7 h-7 text-accent-green" />
               : <ShieldOff className="w-7 h-7 text-accent-red/80" />}
@@ -96,14 +88,12 @@ function SecurityTab() {
               <h2 className="text-[17px] font-bold text-text-primary font-heading tracking-tight">
                 {palmEnrolled ? 'Biometric Security Active' : 'Biometric Security Inactive'}
               </h2>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${
-                palmEnrolled
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${palmEnrolled
                   ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
                   : 'bg-accent-red/10 text-accent-red/80 border-accent-red/20'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  palmEnrolled ? 'bg-accent-green' : 'bg-accent-red/70'
-                }`} />
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${palmEnrolled ? 'bg-accent-green' : 'bg-accent-red/70'
+                  }`} />
                 {palmEnrolled ? 'Verified' : 'Action Required'}
               </span>
             </div>
@@ -133,11 +123,10 @@ function SecurityTab() {
           ].map(({ label, value }) => (
             <div key={label} className="px-5 py-4">
               <div className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mb-1">{label}</div>
-              <div className={`text-[13px] font-bold font-heading ${
-                value === 'Active' || value === 'Full' ? 'text-accent-green' :
-                value === 'Inactive' || value === 'None' ? 'text-accent-red/70' :
-                'text-text-primary'
-              }`}>{value}</div>
+              <div className={`text-[13px] font-bold font-heading ${value === 'Active' || value === 'Full' ? 'text-accent-green' :
+                  value === 'Inactive' || value === 'None' ? 'text-accent-red/70' :
+                    'text-text-primary'
+                }`}>{value}</div>
             </div>
           ))}
         </div>
@@ -151,11 +140,10 @@ function SecurityTab() {
               label="Signature Status"
               sub={palmEnrolled ? "Active — Palm ID verified" : "Not enrolled"}
               right={
-                <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border ${
-                  palmEnrolled
+                <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border ${palmEnrolled
                     ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
                     : 'bg-accent-red/10 text-accent-red/70 border-accent-red/20'
-                }`}>
+                  }`}>
                   {palmEnrolled ? 'Enrolled' : 'Not Set'}
                 </span>
               }
@@ -169,38 +157,6 @@ function SecurityTab() {
             />
           </SectionCard>
 
-          <SectionCard title="Internal Vault Access">
-            <SettingRow icon={Key} iconColor="#f59e0b" label="Master Access Token"
-              sub={showKey ? "PALM-REG-0X2B-K9L1-77VY" : "••••-••••-••••-••••"}
-              right={
-                <button onClick={() => setShowKey(!showKey)} className="bg-text-primary/5 border border-border-main rounded-xl px-4 py-2 text-text-secondary text-[11px] font-bold hover:text-text-primary transition-all flex items-center gap-2">
-                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />} {showKey ? "Hide" : "Reveal"}
-                </button>
-              } />
-          </SectionCard>
-        </div>
-
-        <div>
-          <SectionCard title="Authorized Hardware" subtitle="Active sessions signed into your profile">
-            <div className="space-y-1">
-              {DEVICES.map((d) => (
-                <div key={d.id} className="flex items-center gap-4 py-5 border-b border-white/5 last:border-0 group">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xl border border-border-main transition-all ${d.trusted ? "bg-accent-green/10" : "bg-text-primary/5"}`}>
-                    {d.type === "Mobile" ? "📱" : d.type === "Desktop" ? "💻" : "🌐"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[14px] font-bold text-text-primary font-heading">{d.name}</div>
-                    <div className="text-[11px] text-text-secondary font-medium">{d.type} • Active {d.lastActive}</div>
-                  </div>
-                  <div className="shrink-0 ml-2">
-                    {d.trusted ? <CheckCircle size={18} className="text-accent-green" /> : (
-                      <button className="text-[11px] text-accent-red bg-accent-red/10 hover:bg-accent-red/20 border border-accent-red/20 rounded-lg px-4 py-1.5 font-bold transition-all uppercase tracking-tight">Revoke</button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
         </div>
       </div>
 
@@ -217,17 +173,37 @@ function SecurityTab() {
 }
 
 export default function Settings() {
-  const { user } = useUser();
-  const { isDark, toggleTheme } = useWalletStore();
+  const { user: clerkUser } = useUser();
+  const { isDark, toggleTheme, user: dbUser, fetchData, updateProfile } = useWalletStore();
+  const { fetchPalmStatus } = usePalmStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [saved, setSaved] = useState(false);
+  const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    if (clerkUser?.id) {
+      fetchData(clerkUser.id).then(() => {
+         // Optionally set internal state from dbUser if needed
+      });
+      fetchPalmStatus(clerkUser.id);
+    }
+  }, [clerkUser?.id]);
+
+  useEffect(() => {
+    if (dbUser?.phone) setPhone(dbUser.phone);
+  }, [dbUser]);
 
   const activeTab = searchParams.get("tab") === "security" ? "Security" : "General";
   const setTab = (tab) => setSearchParams(tab === "Security" ? { tab: "security" } : {});
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    if (clerkUser?.id) {
+      const success = await updateProfile(clerkUser.id, { phone });
+      if (success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    }
   };
 
   return (
@@ -257,31 +233,43 @@ export default function Settings() {
               <div className="flex flex-col sm:flex-row items-center gap-8 mb-12">
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-accent-blue/30 p-1 bg-bg-main shadow-lg">
-                    <img src={user?.imageUrl} className="w-full h-full rounded-[1.8rem] object-cover" />
+                    <img src={clerkUser?.imageUrl} className="w-full h-full rounded-[1.8rem] object-cover" />
                   </div>
-                  <button className="absolute -bottom-2 -right-2 w-10 h-10 rounded-xl bg-accent-blue border-4 border-bg-card flex items-center justify-center text-white shadow-xl hover:scale-110 transition-transform">
-                    <Camera size={16} />
-                  </button>
                 </div>
                 <div className="text-center sm:text-left">
-                  <div className="text-2xl font-bold text-text-primary font-heading tracking-tight">{user?.fullName || user?.username}</div>
-                  <div className="text-[13px] text-text-secondary mt-1.5 font-medium">{user?.primaryEmailAddress?.emailAddress}</div>
+                  <div className="text-2xl font-bold text-text-primary font-heading tracking-tight">{clerkUser?.fullName || clerkUser?.username}</div>
+                  <div className="text-[13px] text-text-secondary mt-1.5 font-medium">{clerkUser?.primaryEmailAddress?.emailAddress}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 {[
-                  { label: "Vault Alias", value: user?.fullName || user?.username || "" },
-                  { label: "Primary Email", value: user?.primaryEmailAddress?.emailAddress || "" },
+                  { label: "Vault Alias", value: clerkUser?.fullName || clerkUser?.username || "", readOnly: true },
+                  { label: "Primary Email", value: clerkUser?.primaryEmailAddress?.emailAddress || "", readOnly: true },
                 ].map((f) => (
                   <div key={f.label}>
                     <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] mb-3 font-heading">{f.label}</div>
                     <input
                       defaultValue={f.value}
-                      className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                      readOnly={f.readOnly}
+                      className={`w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner ${f.readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                   </div>
                 ))}
+                
+                <div className="sm:col-span-2">
+                  <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.15em] mb-3 font-heading flex items-center gap-2">
+                    Vault Phone Number
+                    <span className="text-[9px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md font-black">SEARCHABLE</span>
+                  </div>
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+92 300 1234567"
+                    className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                  />
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60">Required for peer-to-peer transfers using your phone number.</p>
+                </div>
               </div>
             </SectionCard>
           </div>

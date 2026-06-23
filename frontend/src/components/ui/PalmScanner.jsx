@@ -77,11 +77,10 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
       stopCamera();
     }
     return () => stopCamera();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, facingMode]);
 
   const startCamera = async () => {
-    // Stop any existing stream first
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -89,24 +88,30 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     setPalmReady(false);
     setStatus("Starting camera...");
 
-    // Try exact facingMode first, fall back to ideal
     const constraints = [
-      { video: { facingMode: { exact: facingMode }, width: { ideal: 1280 }, height: { ideal: 1280 } } },
       { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 1280 } } },
       { video: true },
     ];
 
     let mediaStream = null;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("Security Block");
+      setInstruction("HTTPS is required for camera access. Please use 'https://' and accept the SSL certificate.");
+      return;
+    }
+
     for (const c of constraints) {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia(c);
-        break;
-      } catch (_) { /* try next */ }
+        if (mediaStream) break;
+      } catch (err) {
+        console.warn("Camera constraint failed:", c);
+      }
     }
 
     if (!mediaStream) {
       setStatus("Camera Access Failed");
-      setInstruction("Please allow camera access and try again.");
+      setInstruction("Could not access camera. Check permissions or if another app is using it.");
       return;
     }
 
@@ -328,17 +333,15 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
 
           {/* Controls */}
           <div className="p-8 pt-2 text-center">
-            <p className={`text-[14px] font-bold mb-1 transition-colors font-heading ${
-              status === "Verification Failed" ? "text-accent-red" : "text-text-primary"
-            }`}>
+            <p className={`text-[14px] font-bold mb-1 transition-colors font-heading ${status === "Verification Failed" ? "text-accent-red" : "text-text-primary"
+              }`}>
               {instruction}
             </p>
 
             {/* Hand presence indicator (soft — never blocks scanning) */}
             {mpLoaded && !scanning && !isSuccess && (
-              <div className={`flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest mb-2 transition-colors ${
-                palmReady ? "text-accent-green" : "text-text-secondary/50"
-              }`}>
+              <div className={`flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest mb-2 transition-colors ${palmReady ? "text-accent-green" : "text-text-secondary/50"
+                }`}>
                 {palmReady ? (
                   <><span className="w-1.5 h-1.5 rounded-full bg-accent-green inline-block" /> Hand Detected</>
                 ) : (

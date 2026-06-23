@@ -18,7 +18,7 @@ export default function Topbar() {
   return (
     <header className="h-[80px] flex items-center justify-between px-6 sm:px-10 bg-bg-main border-b border-border-main relative z-50">
       {/* Mobile Menu Button */}
-      <button 
+      <button
         onClick={toggleSidebar}
         className="lg:hidden p-2.5 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95"
       >
@@ -28,7 +28,7 @@ export default function Topbar() {
       {/* Right Side */}
       <div className="flex items-center gap-3 ml-auto">
         <div className="relative">
-          <button 
+          <button
             onClick={() => setIsNotifOpen(!isNotifOpen)}
             className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${isNotifOpen ? "bg-accent-blue/10 border-accent-blue text-accent-blue" : "bg-bg-card border-border-main text-text-secondary hover:text-text-primary"}`}
           >
@@ -53,13 +53,13 @@ export default function Topbar() {
                     <span className="text-[11px] font-bold text-text-primary uppercase tracking-[0.2em] font-heading">Notifications</span>
                     <span className="text-[9px] font-bold text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded-md">NEW</span>
                   </div>
-                  
+
                   <div className="space-y-3 relative z-10 max-h-[300px] overflow-y-auto no-scrollbar">
                     {notifications.length > 0 ? (
                       notifications.map((n, i) => (
                         <div key={i} className="flex gap-4 p-3 rounded-xl bg-text-primary/2 hover:bg-text-primary/5 border border-transparent hover:border-border-main/50 transition-all group">
                           <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${n.type === 'security' ? 'bg-accent-red/10 text-accent-red' : 'bg-accent-blue/10 text-accent-blue'}`}>
-                             {n.type === 'security' ? <Zap size={14} /> : <ShieldCheck size={14} />}
+                            {n.type === 'security' ? <Zap size={14} /> : <ShieldCheck size={14} />}
                           </div>
                           <div className="min-w-0">
                             <div className="text-[12px] font-bold text-text-primary uppercase tracking-tight truncate leading-tight mb-0.5">{n.event}</div>
@@ -69,15 +69,15 @@ export default function Topbar() {
                       ))
                     ) : (
                       <div className="text-center py-10">
-                         <p className="text-[11px] text-text-secondary font-bold uppercase tracking-widest opacity-40 italic">System Idle. No new alerts.</p>
+                        <p className="text-[11px] text-text-secondary font-bold uppercase tracking-widest opacity-40 italic">System Idle. No new alerts.</p>
                       </div>
                     )}
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => {
-                        setIsNotifOpen(false);
-                        navigate("/notifications");
+                      setIsNotifOpen(false);
+                      navigate("/notifications");
                     }}
                     className="w-full mt-4 py-3 bg-text-primary/5 hover:bg-text-primary/10 rounded-xl text-[10px] font-bold text-text-secondary tracking-widest uppercase transition-all"
                   >

@@ -15,6 +15,7 @@ export const useWalletStore = create((set, get) => ({
   isSecure: true,
   palmEnrolled: false,
   users: [],
+  user: null,
 
   setSecure: (status) => set({ isSecure: status }),
 
@@ -29,17 +30,18 @@ export const useWalletStore = create((set, get) => ({
   },
 
   // Sync
-  fetchData: async (clerkId) => {
+  fetchData: async (clerkId, name) => {
     if (!clerkId || get().loading) return;
     set({ loading: true });
     try {
       const [userRes, transRes, notifsRes] = await Promise.all([
-        api.get(`/users/${clerkId}`),
+        api.get(`/users/${clerkId}?name=${encodeURIComponent(name || '')}`),
         api.get(`/transactions/${clerkId}`),
         api.get(`/notifications/${clerkId}`)
       ]);
 
       set({
+        user: userRes.data,
         balance: userRes.data.balance || 0,
         linkedBanks: userRes.data.linkedBanks || [],
         cards: (userRes.data.cards || []).map(c => ({ ...c, network: c.brand || 'VISA' })),
@@ -207,6 +209,19 @@ export const useWalletStore = create((set, get) => ({
       return true;
     } catch (err) {
       toast.error('Failed to issue card', { id: 'card-issue-error' });
+      return false;
+    }
+  },
+
+  // Profile
+  updateProfile: async (clerkId, data) => {
+    try {
+      const res = await api.post('/users/update', { clerkId, ...data });
+      set({ user: res.data.user });
+      toast.success('Profile updated', { id: 'profile-update-success' });
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Update failed', { id: 'profile-update-error' });
       return false;
     }
   },
