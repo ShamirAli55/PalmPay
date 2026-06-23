@@ -1,8 +1,7 @@
-import { SignIn } from "@clerk/clerk-react";
+import { SignUp } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 import { motion } from "framer-motion";
-import { Smartphone, ShieldCheck, Hand } from "lucide-react";
-
+import { Hand } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /**
@@ -32,7 +31,7 @@ const clerkAppearance = {
   },
 };
 
-export default function Login() {
+export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-[#040a18] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans">
       {/* Background Decor */}
@@ -50,18 +49,18 @@ export default function Login() {
               <Hand className="w-8 h-8 text-accent-blue" />
             </div>
             <h1 className="text-2xl font-black text-white font-heading tracking-tight mb-2 uppercase">
-              Sign In
+              Sign Up
             </h1>
             <p className="text-[11px] text-white/40 font-bold uppercase tracking-widest font-sans">
-              Welcome back to PalmPay
+              Create your PalmPay account
             </p>
           </div>
 
           <div className="w-full flex justify-center mb-8">
-            <SignIn
+            <SignUp
               routing="path"
-              path="/login"
-              signUpUrl="/signup"
+              path="/signup"
+              signInUrl="/login"
               appearance={clerkAppearance}
               forceRedirectUrl="/dashboard"
             />
@@ -69,13 +68,13 @@ export default function Login() {
 
           <div className="pt-8 border-t border-white/5 flex flex-col items-center gap-4">
             <p className="text-[11px] font-bold text-white/20 uppercase tracking-widest font-sans">
-              Don't have an account?
+              Already have an account?
             </p>
             <Link 
-              to="/signup"
-              className="w-full py-3.5 rounded-xl border border-accent-blue/20 bg-accent-blue/5 text-accent-blue text-xs font-bold uppercase tracking-widest text-center hover:bg-accent-blue/10 transition-all"
+              to="/login"
+              className="w-full py-3.5 rounded-xl border border-accent-blue/20 bg-accent-blue/5 text-accent-blue text-xs font-bold uppercase tracking-widest text-center hover:bg-accent-blue/10 transition-all font-sans"
             >
-              Sign Up
+              Sign In
             </Link>
           </div>
         </div>
@@ -83,4 +82,3 @@ export default function Login() {
     </div>
   );
 }
-

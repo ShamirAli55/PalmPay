@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useWalletStore } from "../store/walletStore";
+import { useNavigate } from "react-router-dom";
 import {
   AreaChart,
   Area,
@@ -15,10 +16,11 @@ import {
   PieChart,
   Pie,
 } from "recharts";
-import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, ArrowLeft } from "lucide-react";
 
 // ── Analytics Component ──────────────────────────────────────────────────────
 export default function Analytics() {
+  const navigate = useNavigate();
   const { user } = useUser();
   const { transactions, fetchData, getAnalyticsData } = useWalletStore();
 
@@ -43,10 +45,18 @@ export default function Analytics() {
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-1.5 min-h-screen">
-      {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-3xl font-bold text-text-primary m-0 tracking-tight font-heading">Financial Analytics</h1>
-        <p className="text-sm text-text-secondary mt-2">Track your spending and income trends over time.</p>
+      {/* Dynamic Header with Back Navigation */}
+      <div className="flex items-center gap-4 mb-2">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2.5 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary hover:border-accent-blue/30 transition-all active:scale-95 shadow-sm"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary m-0 tracking-tight font-heading">Financial Analytics</h1>
+          <p className="text-[11px] sm:text-sm text-text-secondary mt-1 font-medium opacity-70 italic">Track your spending and income trends over time.</p>
+        </div>
       </div>
 
       {/* Quick Stats Grid */}

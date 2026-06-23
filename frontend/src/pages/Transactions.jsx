@@ -17,7 +17,7 @@ import {
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
 const CATEGORIES = ["All Categories", "Transfer", "Shopping", "Income", "Software", "Technology"];
 const PAGE_SIZE = 5;

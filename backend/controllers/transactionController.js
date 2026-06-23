@@ -2,8 +2,9 @@ const axios       = require('axios');
 const formData    = require('form-data');
 const User        = require('../models/User');
 const Wallet      = require('../models/Wallet');
-const Transaction = require('../models/Transaction');
-const BankAccount = require('../models/BankAccount');
+const Transaction  = require('../models/Transaction');
+const BankAccount  = require('../models/BankAccount');
+const Notification = require('../models/Notification');
 
 const PALM_AUTH_URL = process.env.PALM_AUTH_URL || 'http://localhost:8000';
 
@@ -30,63 +31,137 @@ exports.getTransactions = async (req, res) => {
 
 // ─── POST /api/transactions/create ──────────────────────────────────────────
 exports.createTransaction = async (req, res) => {
-    try {
-        const { clerkId, recipientId, recipient, amount, category, description } = req.body;
+    const mongoose = require('mongoose');
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-        if (!req.file) return res.status(400).json({ message: 'Palm authentication required' });
+    try {
+        const { clerkId, recipientId, bankId, recipient, amount, category, description } = req.body;
+
+        if (!req.file) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Palm authentication required' });
+        }
 
         const palmResp = await verifyPalmBiometric(clerkId, req.file.buffer);
         if (!palmResp.accepted) {
-            return res.status(401).json({ message: 'Palm authentication failed', similarity: palmResp.similarity });
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(401).json({ message: 'Palm authentication failed' });
         }
 
-        const [user, wallet] = await Promise.all([
-            User.findOne({ clerkId }),
-            Wallet.findOne({ userId: clerkId }),
-        ]);
-        if (!user || !wallet) return res.status(404).json({ message: 'User or Wallet not found' });
-        if (wallet.balance < parseFloat(amount)) return res.status(400).json({ message: 'Insufficient balance' });
-
-        const [recipientUser, recipientWallet] = await Promise.all([
-            User.findOne({ clerkId: recipientId }),
-            Wallet.findOne({ userId: recipientId }),
-        ]);
-
-        // Debit sender
         const amtNum = Math.abs(parseFloat(amount));
-        const txOut = new Transaction({
-            userId: clerkId,
-            sender: user.name || 'Me',
-            recipient: recipient || recipientUser?.name || 'Unknown',
-            amount: -amtNum,
-            category: category || 'Transfer',
-            type: 'transfer',
-            paymentMethod: { type: 'wallet' },
-            description,
-        });
-        wallet.balance -= amtNum;
-        await Promise.all([wallet.save(), txOut.save()]);
 
-        // Credit recipient if on-platform
-        if (recipientWallet) {
-            const txIn = new Transaction({
-                userId: recipientId,
-                sender: user.name || 'Me',
-                recipient: recipientUser?.name || 'User',
-                amount: amtNum,
-                category: category || 'Transfer',
-                type: 'credit',
-                paymentMethod: { type: 'wallet' },
-                description: `Received from ${user.name}`,
+        // Use session in all finds/saves
+        const senderWallet = await Wallet.findOne({ userId: clerkId }).session(session);
+        const senderUser = await User.findOne({ clerkId }).session(session);
+        
+        if (!senderWallet || !senderUser) throw new Error('Sender wallet or user not found');
+        if (senderWallet.balance < amtNum) throw new Error('Insufficient balance');
+
+        // Deduct from sender
+        senderWallet.balance -= amtNum;
+        await senderWallet.save({ session });
+
+        let txOut;
+
+        if (bankId) {
+            // TRANSFER TO BANK (WITHDRAWAL)
+            const bank = await BankAccount.findById(bankId).session(session);
+            if (!bank) throw new Error('Target bank account not found');
+
+            bank.balance += amtNum;
+            await bank.save({ session });
+
+            txOut = new Transaction({
+                userId: clerkId,
+                sender: 'My Wallet',
+                recipient: bank.bankName,
+                amount: -amtNum,
+                category: 'Bank Transfer',
+                type: 'transfer',
+                paymentMethod: { type: 'bank', id: bankId },
+                description: description || `Transfer to ${bank.bankName}`,
             });
-            recipientWallet.balance += amtNum;
-            await Promise.all([recipientWallet.save(), txIn.save()]);
+        } else {
+            // P2P TRANSFER
+            const recipientWallet = await Wallet.findOne({ userId: recipientId }).session(session);
+            const recipientUser = await User.findOne({ clerkId: recipientId }).session(session);
+
+            txOut = new Transaction({
+                userId: clerkId,
+                sender: senderUser.name || 'Me',
+                recipient: recipient || recipientUser?.name || 'External Recipient',
+                amount: -amtNum,
+                category: category || 'Transfer',
+                type: 'transfer',
+                paymentMethod: { type: 'wallet' },
+                description,
+            });
+
+            // Credit recipient if on-platform
+            if (recipientWallet) {
+                recipientWallet.balance += amtNum;
+                await recipientWallet.save({ session });
+
+                const txIn = new Transaction({
+                    userId: recipientId,
+                    sender: senderUser.name || 'External Sender',
+                    recipient: recipientUser?.name || 'Me',
+                    amount: amtNum,
+                    category: category || 'Transfer',
+                    type: 'credit',
+                    paymentMethod: { type: 'wallet' },
+                    description: `Received from ${senderUser.name || 'User'}`,
+                });
+                await txIn.save({ session });
+            }
         }
 
-        res.json({ message: 'Transaction successful', transaction: txOut, balance: wallet.balance });
+        await txOut.save({ session });
+
+        // Finalize transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        // System Post-Journaling (Create notifications asynchronously outside transaction for speed)
+        try {
+            // Notification for Sender
+            await new Notification({
+                userId: clerkId,
+                title: 'Payment Sent',
+                message: `You successfully sent Rs. ${amtNum.toLocaleString()} to ${recipient || recipientUser?.name || 'External Account'}.`,
+                type: 'transaction'
+            }).save();
+
+            // Notification for Receiver
+            if (recipientWallet) {
+                await new Notification({
+                    userId: recipientId,
+                    title: 'Funds Received',
+                    message: `You received Rs. ${amtNum.toLocaleString()} from ${senderUser.name || 'User'}.`,
+                    type: 'transaction'
+                }).save();
+            }
+        } catch (notifErr) {
+            console.error('Async Notification Error:', notifErr);
+        }
+
+        res.json({ 
+            message: 'Transaction successful', 
+            transaction: txOut, 
+            balance: senderWallet.balance 
+        });
+
     } catch (err) {
-        console.error('createTransaction error:', err);
-        res.status(500).json({ error: 'Transaction failed' });
+        console.error('createTransaction transaction failed, rolling back:', err);
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({ 
+            error: 'Transaction failed', 
+            message: err.message === 'Insufficient balance' ? 'Insufficient balance' : 'Security or connection error' 
+        });
     }
 };
 
@@ -134,6 +209,18 @@ exports.addFunds = async (req, res) => {
         });
         wallet.balance += amtNum;
         await Promise.all([wallet.save(), tx.save()]);
+
+        // Journal the deposit
+        try {
+            await new Notification({
+                userId: clerkId,
+                title: 'Funds Added',
+                message: `Rs. ${amtNum.toLocaleString()} successfully added to your wallet from ${source || 'External Source'}.`,
+                type: 'transaction'
+            }).save();
+        } catch (notifErr) {
+            console.error('Deposit Notification Error:', notifErr);
+        }
 
         const banks = await BankAccount.find({ userId: clerkId });
 

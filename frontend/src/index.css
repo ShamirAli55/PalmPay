@@ -51,7 +51,9 @@
 /* =========================
    GLOBAL STYLES
 ========================= */
-html, body, #root {
+html,
+body,
+#root {
   background-color: var(--bg-main);
   color: var(--text-primary);
   margin: 0;
@@ -61,7 +63,11 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, .font-heading {
+h1,
+h2,
+h3,
+h4,
+.font-heading {
   font-family: 'Outfit Variable', sans-serif;
 }
 
@@ -69,6 +75,7 @@ h1, h2, h3, h4, .font-heading {
 * {
   scrollbar-width: none;
 }
+
 *::-webkit-scrollbar {
   display: none;
 }
@@ -109,6 +116,9 @@ h1, h2, h3, h4, .font-heading {
 .cl-internal-df68v5,
 [data-clerk-brand],
 .cl-userButtonPopoverFooter,
+.cl-header,
+.cl-headerTitle,
+.cl-headerSubtitle,
 .cl-internal-b3fm6y {
   display: none !important;
   height: 0 !important;
@@ -119,7 +129,7 @@ h1, h2, h3, h4, .font-heading {
   pointer-events: none !important;
 }
 
-.cl-userButtonPopoverFooter + div,
+.cl-userButtonPopoverFooter+div,
 .cl-internal-xl0p27 {
   display: none !important;
 }
@@ -132,10 +142,12 @@ h1, h2, h3, h4, .font-heading {
   transition: all 0.2s ease !important;
   overflow: hidden !important;
 }
+
 .cl-userButtonTrigger:hover {
   border-color: var(--accent-blue) !important;
   transform: scale(1.02);
 }
+
 .cl-avatarBox {
   width: 32px !important;
   height: 32px !important;

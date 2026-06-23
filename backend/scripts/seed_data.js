@@ -1,10 +1,10 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('./models/User');
-const Wallet = require('./models/Wallet');
-const BankAccount = require('./models/BankAccount');
-const Card = require('./models/Card');
-const Transaction = require('./models/Transaction');
+const User = require('../models/User');
+const Wallet = require('../models/Wallet');
+const BankAccount = require('../models/BankAccount');
+const Card = require('../models/Card');
+const Transaction = require('../models/Transaction');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -26,47 +26,34 @@ async function seedData() {
         await mongoose.connect(MONGODB_URI);
         console.log("✅ Connected.");
 
-        // Fetch all existing users
         const users = await User.find({});
         if (users.length === 0) {
-            console.log("⚠️ No users found in DB. Please sign in to the app first to create a user account.");
+            console.log("⚠️ No users found. Please sign in first.");
             process.exit(0);
         }
 
-        console.log(`🔍 Found ${users.length} users. Seeding data for each...`);
-
         for (const user of users) {
             const clerkId = user.clerkId;
-            if (!clerkId) {
-                console.log(`\n⏭️ Skipping invalid user (ID: ${user._id}) - no clerkId found.`);
-                continue;
-            }
             console.log(`\n👤 Seeding for: ${user.name || clerkId}`);
 
-            // 1. Ensure Wallet exists
             let wallet = await Wallet.findOne({ userId: clerkId });
             if (!wallet) {
                 wallet = new Wallet({ userId: clerkId, balance: 25000 });
                 await wallet.save();
-                console.log("  - Wallet created");
             }
 
-            // 2. Ensure Bank Accounts exist
             const bankCount = await BankAccount.countDocuments({ userId: clerkId });
             if (bankCount === 0) {
-                const defaultBanks = [
+                await BankAccount.insertMany([
                     { userId: clerkId, bankName: "HBL Bank", accountNumberMasked: "•••• 4920", balance: 145000, accountHolderName: user.name || 'User' },
                     { userId: clerkId, bankName: "Meezan Bank", accountNumberMasked: "•••• 1155", balance: 282000, accountHolderName: user.name || 'User' },
                     { userId: clerkId, bankName: "Easypaisa", accountNumberMasked: "•••• 8829", balance: 32500, accountHolderName: user.name || 'User' },
-                ];
-                await BankAccount.insertMany(defaultBanks);
-                console.log("  - 3 Bank accounts seeded");
+                ]);
             }
 
-            // 3. Ensure Card exists
-            const cardCount = await Card.countDocuments({ userId: clerkId });
-            if (cardCount === 0) {
-                const card = new Card({
+            await Card.deleteMany({ userId: clerkId }); // Refresh cards
+            await Card.insertMany([
+                {
                     userId: clerkId,
                     walletId: wallet._id,
                     cardType: 'Virtual',
@@ -74,30 +61,43 @@ async function seedData() {
                     label: 'PLATINUM PRIME',
                     last4: '8829',
                     expiry: '12/26',
-                    status: 'active'
-                });
-                await card.save();
-                console.log("  - Virtual card seeded");
-            }
+                    status: 'active',
+                    color: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
+                },
+                {
+                    userId: clerkId,
+                    walletId: wallet._id,
+                    cardType: 'Virtual',
+                    brand: 'MASTERCARD',
+                    label: 'STEALTH BLACK',
+                    last4: '2048',
+                    expiry: '08/28',
+                    status: 'active',
+                    color: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+                },
+                {
+                    userId: clerkId,
+                    walletId: wallet._id,
+                    cardType: 'Virtual',
+                    brand: 'VISA',
+                    label: 'INDIGO PRIORITY',
+                    last4: '4452',
+                    expiry: '05/27',
+                    status: 'active',
+                    color: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)'
+                }
+            ]);
 
-            // 4. Generate 50+ Transactions over the last 30 days
-            console.log("  - Generating transaction history (50 items)...");
-            await Transaction.deleteMany({ userId: clerkId }); // Clear old history for clean seed
-
+            await Transaction.deleteMany({ userId: clerkId });
             const txns = [];
             for (let i = 0; i < 50; i++) {
                 const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
                 const merchantsForCat = MERCHANTS[category];
                 const merchant = merchantsForCat[Math.floor(Math.random() * merchantsForCat.length)];
-                
                 const type = (category === 'Transfer' || Math.random() > 0.8) ? (Math.random() > 0.5 ? 'credit' : 'debit') : 'debit';
                 const amount = parseFloat((Math.random() * 5000 + 50).toFixed(2));
-                
-                // Random date within last 30 days
                 const date = new Date();
                 date.setDate(date.getDate() - Math.floor(Math.random() * 30));
-                date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
-
                 txns.push({
                     userId: clerkId,
                     sender: type === 'credit' ? merchant : (user.name || 'Me'),
@@ -111,12 +111,11 @@ async function seedData() {
                     paymentMethod: { type: Math.random() > 0.5 ? 'wallet' : 'bank' }
                 });
             }
-
             await Transaction.insertMany(txns);
-            console.log(`  - ✅ ${txns.length} transactions seeded.`);
+            console.log(`  - ✅ Seeding for ${user.name} complete.`);
         }
 
-        console.log("\n✨ Seeding complete! All users now have full financial history.");
+        console.log("\n✨ Database refreshed.");
         process.exit(0);
     } catch (err) {
         console.error("❌ Seeding failed:", err);

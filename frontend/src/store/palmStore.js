@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import api from '../api';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 export const usePalmStore = create((set) => ({
     enrolling: false,
     verifying: false,
-    enrollSamples: 0,
     palmEnrolled: false,
 
     fetchPalmStatus: async (clerkId) => {
@@ -17,6 +16,7 @@ export const usePalmStore = create((set) => ({
         }
     },
 
+    // Single-scan enroll: one image → fully enrolled, no multi-step
     enroll: async (clerkId, imageBlob) => {
         set({ enrolling: true });
         const formData = new FormData();
@@ -25,11 +25,8 @@ export const usePalmStore = create((set) => ({
 
         try {
             const res = await api.post(`/palm/enroll`, formData);
-            set({ enrolling: false, enrollSamples: res.data.samples });
-            if (res.data.status === 'enrolled') {
-                set({ palmEnrolled: true });
-            }
-            toast.success(`Sample ${res.data.samples}/3 enrolled!`, { id: 'palm-enroll-success' });
+            set({ enrolling: false, palmEnrolled: true });
+            toast.success('Palm enrolled successfully', { id: 'palm-enroll' });
             return true;
         } catch (err) {
             set({ enrolling: false });
@@ -48,9 +45,9 @@ export const usePalmStore = create((set) => ({
             const res = await api.post(`/palm/verify`, formData);
             set({ verifying: false });
             if (res.data.accepted) {
-                toast.success('Palm verified!', { id: 'palm-verify-success' });
+                toast.success('Identity verified', { id: 'palm-verify-status' });
             } else {
-                toast.error(`Recognition Failed`, { id: 'palm-verify-fail' });
+                toast.error('Verification failed — try again', { id: 'palm-verify-status' });
             }
             return res.data;
         } catch (err) {

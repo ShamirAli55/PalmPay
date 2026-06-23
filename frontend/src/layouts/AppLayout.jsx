@@ -13,7 +13,7 @@ export default function AppLayout() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, []);
+  }, [isDark]);
   return (
     <div className="flex h-screen bg-bg-main text-text-primary overflow-hidden transition-colors duration-300">
       <Sidebar />

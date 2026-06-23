@@ -5,7 +5,7 @@ import {
   User, Bell, Shield, Palette, Globe, CreditCard,
   ChevronRight, Camera, Check, Moon, Sun,
   Fingerprint, Smartphone, Key, AlertTriangle, CheckCircle, Lock, Eye, EyeOff,
-  Scan, Loader2, LogOut
+  Scan, Loader2, LogOut, ShieldCheck, ShieldOff, Clock
 } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import { usePalmStore } from "../store/palmStore";
@@ -34,7 +34,7 @@ function SectionCard({ title, subtitle, children }) {
 function SettingRow({ icon: Icon, iconColor = "var(--accent-blue)", label, sub, right }) {
   return (
     <div className="flex items-center gap-4 py-5 border-b border-white/5 last:border-0">
-      <div 
+      <div
         style={{ backgroundColor: `${iconColor === 'var(--accent-blue)' ? 'rgba(59, 130, 246, 0.1)' : iconColor + '15'}` }}
         className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-white/5"
       >
@@ -62,7 +62,7 @@ function Toggle({ on, onChange }) {
 
 function SecurityTab() {
   const { user } = useUser();
-  const { enrollSamples, palmEnrolled, fetchPalmStatus } = usePalmStore();
+  const { palmEnrolled, fetchPalmStatus } = usePalmStore();
   const [showKey, setShowKey] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -72,62 +72,112 @@ function SecurityTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-accent-blue/10 border border-accent-blue/20 rounded-xl p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 mb-8 shadow-sm">
-        <div className="relative">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shrink-0 transition-colors duration-500 ${palmEnrolled ? 'bg-accent-green/20' : 'bg-accent-blue/20'}`}>
-                {palmEnrolled ? '🛡️' : '🌐'}
+
+      {/* ── Security Status Header ── */}
+      <div className="bg-bg-card border border-border-main rounded-xl overflow-hidden mb-2">
+        {/* Top accent bar */}
+        <div className={`h-0.5 w-full ${palmEnrolled ? 'bg-accent-green' : 'bg-accent-red/60'}`} />
+
+        <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6">
+          {/* Icon */}
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border ${
+            palmEnrolled
+              ? 'bg-accent-green/10 border-accent-green/20'
+              : 'bg-accent-red/10 border-accent-red/20'
+          }`}>
+            {palmEnrolled
+              ? <ShieldCheck className="w-7 h-7 text-accent-green" />
+              : <ShieldOff className="w-7 h-7 text-accent-red/80" />}
+          </div>
+
+          {/* Text */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-[17px] font-bold text-text-primary font-heading tracking-tight">
+                {palmEnrolled ? 'Biometric Security Active' : 'Biometric Security Inactive'}
+              </h2>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${
+                palmEnrolled
+                  ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
+                  : 'bg-accent-red/10 text-accent-red/80 border-accent-red/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  palmEnrolled ? 'bg-accent-green' : 'bg-accent-red/70'
+                }`} />
+                {palmEnrolled ? 'Verified' : 'Action Required'}
+              </span>
             </div>
-            {palmEnrolled && <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-accent-green rounded-full border-4 border-bg-card flex items-center justify-center text-[10px]">✓</div>}
+            <p className="text-[12px] text-text-secondary mt-1.5 font-medium leading-relaxed">
+              {palmEnrolled
+                ? 'Your palm ID is enrolled. All transactions require biometric confirmation.'
+                : 'Palm ID not enrolled. Enroll now to enable biometric transaction security.'}
+            </p>
+          </div>
+
+          {/* Action */}
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="shrink-0 px-5 py-2.5 bg-accent-blue hover:brightness-110 text-white text-[12px] font-bold rounded-xl transition-all flex items-center gap-2 shadow-md active:scale-95 font-heading uppercase tracking-wide"
+          >
+            <Scan size={14} />
+            {palmEnrolled ? 'Re-enroll' : 'Enroll Now'}
+          </button>
         </div>
-        <div className="flex-1 text-center md:text-left">
-          <div className="text-[11px] text-accent-blue font-bold tracking-[0.2em] uppercase font-heading">Security Compliance</div>
-          <div className="text-2xl font-bold text-text-primary mt-2 font-heading tracking-tight">
-            {palmEnrolled ? 'Protocol Level 4 Active' : 'Registry Entry Pending'}
-          </div>
-          <div className="h-2 rounded-full bg-text-primary/5 mt-5 max-w-md mx-auto md:mx-0 overflow-hidden border border-white/5">
-            <div 
-              style={{ width: palmEnrolled ? '100%' : `${(enrollSamples / 3) * 100}%` }} 
-              className={`h-full rounded-full transition-all duration-1000 ${palmEnrolled ? 'bg-accent-green' : 'bg-accent-blue'}`} 
-            />
-          </div>
+
+        {/* Stats strip */}
+        <div className="border-t border-border-main grid grid-cols-3 divide-x divide-border-main">
+          {[
+            { label: 'Auth Method', value: 'Palm Biometric' },
+            { label: 'Status', value: palmEnrolled ? 'Active' : 'Inactive' },
+            { label: 'Protection', value: palmEnrolled ? 'Full' : 'None' },
+          ].map(({ label, value }) => (
+            <div key={label} className="px-5 py-4">
+              <div className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mb-1">{label}</div>
+              <div className={`text-[13px] font-bold font-heading ${
+                value === 'Active' || value === 'Full' ? 'text-accent-green' :
+                value === 'Inactive' || value === 'None' ? 'text-accent-red/70' :
+                'text-text-primary'
+              }`}>{value}</div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-12">
         <div className="space-y-6">
-          <SectionCard title="Biometric Palm-ID™" subtitle="Manage your palmprint signature">
-             <SettingRow 
-                icon={Fingerprint} 
-                label="Signature Status" 
-                sub={palmEnrolled ? "Successfully Verified" : `Samples Logged: ${enrollSamples}/3`}
-                right={
-                  <button 
-                    onClick={() => setScannerOpen(true)}
-                    className="px-5 py-2.5 bg-accent-blue hover:brightness-110 text-white text-[12px] font-bold rounded-xl transition-all flex items-center gap-2 shadow-md active:scale-95 font-heading uppercase tracking-wide"
-                  >
-                    <Scan size={14} /> {palmEnrolled ? 'Re-enroll' : 'Initialize'}
-                  </button>
-                } 
+          <SectionCard title="Biometric Palm-ID" subtitle="Manage your palmprint authentication">
+            <SettingRow
+              icon={Fingerprint}
+              label="Signature Status"
+              sub={palmEnrolled ? "Active — Palm ID verified" : "Not enrolled"}
+              right={
+                <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border ${
+                  palmEnrolled
+                    ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
+                    : 'bg-accent-red/10 text-accent-red/70 border-accent-red/20'
+                }`}>
+                  {palmEnrolled ? 'Enrolled' : 'Not Set'}
+                </span>
+              }
             />
-            <SettingRow 
-                icon={Lock} 
-                iconColor="var(--accent-green)" 
-                label="Biometric Authorization" 
-                sub="Secure all outgoing transmissions"
-                right={<Toggle on={true} onChange={() => {}} />} 
+            <SettingRow
+              icon={Lock}
+              iconColor="var(--accent-green)"
+              label="Biometric Authorization"
+              sub="Secure all outgoing transmissions"
+              right={<Toggle on={true} onChange={() => { }} />}
             />
           </SectionCard>
 
           <SectionCard title="Internal Vault Access">
-             <SettingRow icon={Key} iconColor="#f59e0b" label="Master Access Token"
+            <SettingRow icon={Key} iconColor="#f59e0b" label="Master Access Token"
               sub={showKey ? "PALM-REG-0X2B-K9L1-77VY" : "••••-••••-••••-••••"}
               right={
                 <button onClick={() => setShowKey(!showKey)} className="bg-text-primary/5 border border-border-main rounded-xl px-4 py-2 text-text-secondary text-[11px] font-bold hover:text-text-primary transition-all flex items-center gap-2">
                   {showKey ? <EyeOff size={14} /> : <Eye size={14} />} {showKey ? "Hide" : "Reveal"}
                 </button>
               } />
-          </SectionCard>Section 1
-<option value=""></option>
+          </SectionCard>
         </div>
 
         <div>
@@ -154,12 +204,12 @@ function SecurityTab() {
         </div>
       </div>
 
-      <PalmScanner 
-        isOpen={scannerOpen} 
-        onClose={() => setScannerOpen(false)} 
-        mode="enroll" 
+      <PalmScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        mode="enroll"
         onVerified={() => {
-            fetchPalmStatus(user.id);
+          fetchPalmStatus(user.id);
         }}
       />
     </div>
@@ -237,7 +287,7 @@ export default function Settings() {
           </div>
 
           <div className="xl:col-span-2 space-y-6">
-             <SectionCard title="System Environment" subtitle="Tailor the interface to your preference">
+            <SectionCard title="System Environment" subtitle="Tailor the interface to your preference">
               <SettingRow
                 icon={isDark ? Moon : Sun}
                 iconColor="var(--accent-blue)"
@@ -252,7 +302,7 @@ export default function Settings() {
             </button>
 
             <button className="w-full py-4 border border-accent-red/20 text-accent-red rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-accent-red/5 transition-all flex items-center justify-center gap-2">
-                <LogOut size={14} /> Exit Vault
+              <LogOut size={14} /> Exit Vault
             </button>
           </div>
         </div>

@@ -12,6 +12,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.28.0",
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^5.1.6",
     "axios": "^1.18.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

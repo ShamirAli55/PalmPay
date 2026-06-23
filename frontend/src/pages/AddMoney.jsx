@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { Shield, ChevronRight, CheckCircle2, History, Loader2, Building2, Smartphone } from "lucide-react";
+import { Shield, ChevronRight, CheckCircle2, History, Loader2, Building2, Smartphone, ArrowLeft } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import PalmScanner from "../components/ui/PalmScanner";
 
@@ -64,17 +64,25 @@ export default function AddMoney() {
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen max-w-4xl mx-auto">
-      {/* Header telemetry */}
-      <div className="flex items-center justify-between px-2">
-         <div className="flex items-center gap-2.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse shadow-[0_0_8px_var(--accent-blue)]" />
-            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Deposit</span>
+      {/* Dynamic Header with Back Navigation */}
+      <div className="flex items-center justify-between px-3 pt-2">
+         <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2.5 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary hover:border-accent-blue/30 transition-all active:scale-95 shadow-sm"
+            >
+               <ArrowLeft size={18} />
+            </button>
+            <div className="flex items-center gap-2.5">
+               <div className="w-1.5 h-1.5 rounded-full bg-accent-blue shadow-[0_0_8px_var(--accent-blue)]" />
+               <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Deposit</span>
+            </div>
          </div>
-         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30">V-AUTH v2.1</span>
+         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30 hidden sm:block">V-AUTH v2.1</span>
       </div>
 
-      <div className="flex-1 w-full max-w-2xl mx-auto">
-        <div className="bg-bg-card border border-border-main rounded-2xl p-6 sm:p-10 shadow-xl relative overflow-hidden group transition-all">
+      <div className="flex-1 w-full max-w-2xl mx-auto px-2 sm:px-0">
+        <div className="bg-bg-card border border-border-main rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden group transition-all">
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent-green/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
           <div className="mb-10 text-center">
@@ -87,17 +95,17 @@ export default function AddMoney() {
               <div className="w-20 h-20 bg-accent-green/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent-green/20 shadow-xl shadow-accent-green/10">
                 <CheckCircle2 className="text-accent-green w-10 h-10" />
               </div>
-              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Deposit Successful</h2>
-              <p className="text-text-secondary text-[14px] mb-10 font-medium leading-relaxed">
-                Your funds have been added successfully.<br />
-                <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> added from<br />
-                <span className="text-accent-blue font-bold uppercase tracking-tight">{linkedBanks.find(b => b.bankId === selectedSource)?.name}</span>
+              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight uppercase">Deposit Successful</h2>
+              <p className="text-text-secondary text-[12px] mb-10 font-bold uppercase tracking-widest leading-relaxed opacity-60">
+                Funds have been provisioned.<br />
+                <span className="text-text-primary">Rs. {parseFloat(amount).toLocaleString()}</span> from<br />
+                <span className="text-accent-blue">{linkedBanks.find(b => b.bankId === selectedSource)?.name}</span>
               </p>
               <button 
                 onClick={() => navigate("/dashboard")}
-                className="w-full sm:w-64 px-10 py-4 bg-accent-blue text-white rounded-xl font-bold hover:brightness-110 transition-all active:scale-95 shadow-xl shadow-accent-blue/20 font-heading uppercase tracking-widest text-[11px]"
+                className="w-full sm:w-72 px-10 py-5 bg-accent-blue text-white rounded-2xl font-bold hover:brightness-110 transition-all active:scale-95 shadow-xl shadow-accent-blue/20 font-heading uppercase tracking-[0.25em] text-[11px]"
               >
-                View Wallet Balance
+                Return to Workbench
               </button>
             </div>
           ) : (
@@ -106,7 +114,6 @@ export default function AddMoney() {
               <div>
                 <div className="flex justify-between items-end mb-6 px-1">
                     <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Select Source</div>
-                    <button className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125">ADD BANK ACCOUNT</button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {linkedBanks.map((bank) => (
@@ -164,13 +171,15 @@ export default function AddMoney() {
                 <button
                   onClick={handleDepositRequest}
                   disabled={!amount || parseFloat(amount) < 100 || loading}
-                  className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-xl text-white text-sm font-bold tracking-[0.2em] shadow-lg active:scale-[0.99] transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
+                  className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-2xl text-white text-[12px] font-bold tracking-[0.25em] shadow-xl shadow-accent-blue/20 active:scale-95 transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
                 >
-                  <div className="flex items-center gap-2.5">
-                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} 
+                  <div className="flex items-center gap-3">
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : <Shield size={20} />} 
                     <span>{loading ? "Adding funds..." : "Confirm Deposit"}</span>
                   </div>
-                  {!loading && parseFloat(amount) < 100 && <span className="text-[9px] opacity-60">Min Rs. 100</span>}
+                  {!loading && parseFloat(amount) < 100 && (
+                    <span className="text-[9px] opacity-60 normal-case tracking-normal">Minimum Deposit: Rs. 100</span>
+                  )}
                 </button>
               </div>
             </div>

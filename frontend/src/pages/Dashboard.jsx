@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   CreditCard,
@@ -26,9 +26,11 @@ import {
 } from "recharts";
 import { STAT_CARDS, SPENDING_CHART, MY_CARDS } from "../constants/index";
 import VaultActions from "../components/ui/VaultActions";
+import PalmScanner from "../components/ui/PalmScanner";
 import { useWalletStore } from "../store/walletStore";
+import { usePalmStore } from "../store/palmStore";
 
-// ── Stat Card ─────────────────────────────────────────────────────────────────
+// Stats
 function StatCard({ card }) {
   const icons = {
     "trending-up": TrendingUp,
@@ -54,11 +56,10 @@ function StatCard({ card }) {
           {card.value}
         </span>
         {card.change && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between w-full">
             <span className={`text-[11px] font-bold rounded-lg px-2 py-0.5 whitespace-nowrap ${card.changePositive ? "text-accent-green bg-accent-green/12" : "text-accent-red bg-accent-red/12"}`}>
               {card.changePositive ? "↑" : "↓"} {card.change}
             </span>
-            <span className="text-[11px] text-text-secondary font-medium">Updated 2m ago</span>
           </div>
         )}
         {card.showProgress && (
@@ -87,7 +88,7 @@ function StatCard({ card }) {
   );
 }
 
-// ── Action Button ─────────────────────────────────────────────────────────────
+// Action
 function ActionButton({ icon: Icon, label, variant = "secondary", onClick }) {
   const base = "flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl text-[13px] font-bold transition-all active:scale-95 cursor-pointer font-heading uppercase tracking-wider";
   const styles = {
@@ -101,35 +102,58 @@ function ActionButton({ icon: Icon, label, variant = "secondary", onClick }) {
   );
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// Dashboard
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useUser();
   const { balance, cards, activeCardId, fetchData, getComputedStats, getChartData, getFinancialSummary } = useWalletStore();
+  const { palmEnrolled, fetchPalmStatus } = usePalmStore();
   const [chartRange, setChartRange] = useState("week");
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const activeCard = cards.find(c => c.id === activeCardId) || cards[0] || MY_CARDS[0];
 
   useEffect(() => {
-    if (user) fetchData(user.id);
-  }, [user, fetchData]);
+    if (user) {
+      fetchData(user.id);
+      fetchPalmStatus(user.id);
+    }
+  }, [user, fetchData, fetchPalmStatus]);
 
   const stats = getComputedStats();
   const chartData = getChartData();
   const summary = getFinancialSummary();
-  // Inject weekly chart data into the first stat card for the background visualization
+
   if (stats.length > 0) {
     stats[0].chartData = chartData.week;
   }
 
+  // Security stat card: always clickable — enroll or re-enroll
+  const handleCardClick = (id) => {
+    if (id === "active-auth") setIsScannerOpen(true);
+  };
+
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen">
-
-      {/* Stat Cards */}
+      {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((card) => (
-          <StatCard key={card.id} card={card} />
+          <div key={card.id} onClick={() => handleCardClick(card.id)}>
+            <StatCard card={card} />
+          </div>
         ))}
       </div>
+
+      <PalmScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        mode="enroll"
+        onVerified={() => {
+          if (user?.id) {
+            fetchData(user.id);
+            fetchPalmStatus(user.id);
+          }
+        }}
+      />
 
       <VaultActions className="grid grid-cols-2 lg:grid-cols-4" />
 
@@ -149,8 +173,8 @@ export default function Dashboard() {
                   key={r}
                   onClick={() => setChartRange(r)}
                   className={`px-5 py-2 rounded-lg text-[12px] font-bold capitalize transition-all duration-200 cursor-pointer ${chartRange === r
-                      ? "bg-accent-blue text-white shadow-md shadow-accent-blue/20"
-                      : "text-text-secondary hover:text-text-primary hover:bg-text-primary/5"
+                    ? "bg-accent-blue text-white shadow-md shadow-accent-blue/20"
+                    : "text-text-secondary hover:text-text-primary hover:bg-text-primary/5"
                     }`}
                 >
                   {r}
@@ -230,45 +254,56 @@ export default function Dashboard() {
         {/* Current Balance */}
         <div className="bg-bg-card border border-border-main rounded-2xl p-8 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-base font-bold text-text-primary font-heading uppercase tracking-tight">Current Balance</h2>
-            <button className="p-2 bg-text-primary/5 rounded-xl hover:bg-text-primary/10 transition-all cursor-pointer">
-              <Plus size={16} className="text-text-primary" />
-            </button>
+            <h2 className="text-base font-bold text-text-primary font-heading uppercase tracking-tight">Active Assets</h2>
+            <div className="flex gap-1.5">
+              {cards.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${cards.indexOf(activeCard) === idx ? "bg-accent-blue w-4" : "bg-text-primary/10"}`}
+                />
+              ))}
+            </div>
           </div>
 
-          <div
-            style={{ background: activeCard.color }}
-            className="w-full rounded-2xl p-6 relative overflow-hidden shadow-xl flex flex-col cursor-pointer transition-all hover:scale-[1.02] min-h-[160px] group"
-          >
-            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
-            {/* Top row: label + holder / network badge */}
-            <div className="flex justify-between items-start mb-5 z-10">
-              <div>
-                <div className="text-[10px] text-white/60 tracking-widest font-bold uppercase">{activeCard.label}</div>
-                <div className="text-[12px] text-white/80 mt-1 font-bold">{activeCard.holder}</div>
-              </div>
-              <div className="bg-white/15 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-white tracking-widest">
-                {activeCard.network}
-              </div>
-            </div>
-            {/* Full masked number */}
-            <div className="text-[13px] tracking-[0.2em] text-white/60 mb-1 font-mono z-10">
-              •••• •••• •••• {activeCard.last4}
-            </div>
-            {/* Balance + expiry */}
-            <div className="flex justify-between items-end mt-auto z-10">
-              <div>
-                <div className="text-[22px] font-extrabold text-white tracking-tight">
-                  Rs. {balance.toLocaleString()}
-                </div>
-                <div className="flex items-center gap-3 mt-1">
+          <div className="relative overflow-visible h-[160px] cursor-grab active:cursor-grabbing">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeCardId}
+                initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                style={{ background: activeCard.color }}
+                title="Swipe to switch cards"
+                onClick={() => {
+                  const nextIdx = (cards.indexOf(activeCard) + 1) % cards.length;
+                  useWalletStore.getState().setActiveCard(cards[nextIdx].id);
+                }}
+                className="w-full h-full rounded-2xl p-6 relative overflow-hidden shadow-xl flex flex-col transition-all hover:brightness-110 active:scale-[0.98] group"
+              >
+                <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
+                <div className="flex justify-between items-start mb-5 z-10">
                   <div>
-                    <div className="text-[9px] text-white/40 tracking-widest font-bold">EXPIRY</div>
-                    <div className="text-[11px] text-white/80 font-bold">{activeCard.expiry}</div>
+                    <div className="text-[10px] text-white/60 tracking-widest font-bold uppercase">{activeCard.label}</div>
+                    <div className="text-[12px] text-white/80 mt-1 font-bold">PALM USER</div>
+                  </div>
+                  <div className="bg-white/15 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-white tracking-widest">
+                    {activeCard.network}
                   </div>
                 </div>
-              </div>
-            </div>
+                <div className="text-[13px] tracking-[0.2em] text-white/60 mb-1 font-mono z-10 font-bold">
+                  •••• •••• •••• {activeCard.last4}
+                </div>
+                <div className="flex justify-between items-end mt-auto z-10">
+                  <div>
+                    <div className="text-[22px] font-extrabold text-white tracking-tight">
+                      Rs. {activeCard.balance?.toLocaleString() || "0"}
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-white/40 font-bold">V-AUTH ACTIVE</div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className="mt-6 space-y-3">
@@ -302,28 +337,36 @@ export default function Dashboard() {
 
       {/* Security Status - The 'Normal' Placeholder */}
       <div className="bg-bg-card border border-border-main rounded-2xl p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 mb-12 group transition-all hover:shadow-md">
-         <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-accent-blue/10 flex items-center justify-center border border-accent-blue/20 group-hover:scale-105 transition-transform duration-500 shadow-sm shadow-accent-blue/10">
-               <Hand className="w-8 h-8 text-accent-blue" />
-            </div>
-            <div>
-               <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">Palm Recognition Security</h2>
-               <p className="text-[12px] text-text-secondary font-medium max-w-[320px] leading-relaxed">Your palm scan is active. Your account is fully protected.</p>
-            </div>
-         </div>
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 rounded-2xl bg-accent-blue/10 flex items-center justify-center border border-accent-blue/20 group-hover:scale-105 transition-transform duration-500 shadow-sm shadow-accent-blue/10">
+            <Hand className="w-8 h-8 text-accent-blue" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">Palm Recognition Security</h2>
+            <p className="text-[12px] text-text-secondary font-medium max-w-[320px] leading-relaxed">
+              {palmEnrolled 
+                ? "Your palm scan is active. Your account is fully protected." 
+                : "Biometric security is not yet active. Please complete enrollment."}
+            </p>
+          </div>
+        </div>
 
-         <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="hidden md:flex flex-col items-end mr-4">
-                <span className="text-[10px] text-accent-green font-black uppercase tracking-widest">Protected</span>
-                <span className="text-[11px] text-text-secondary font-medium">Last scan: Today, 10:45 AM</span>
-            </div>
-            <button 
-              onClick={() => navigate("/security")}
-              className="flex-1 md:flex-none px-10 py-4 bg-bg-main border border-border-main rounded-xl text-[12px] font-bold text-text-primary uppercase tracking-widest hover:bg-text-primary/5 transition-all active:scale-95 font-heading"
-            >
-               Security Settings
-            </button>
-         </div>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="hidden md:flex flex-col items-end mr-4">
+            <span className={`text-[10px] font-black uppercase tracking-widest ${palmEnrolled ? "text-accent-green" : "text-accent-red"}`}>
+              {palmEnrolled ? "Protected" : "Action Required"}
+            </span>
+            <span className="text-[11px] text-text-secondary font-medium">
+              {palmEnrolled ? "Identity Verified" : "Setup Incomplete"}
+            </span>
+          </div>
+          <button
+            onClick={() => navigate("/security")}
+            className="flex-1 md:flex-none px-10 py-4 bg-bg-main border border-border-main rounded-xl text-[12px] font-bold text-text-primary uppercase tracking-widest hover:bg-text-primary/5 transition-all active:scale-95 font-heading"
+          >
+            Security Settings
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ async function provisionNewUser(clerkId, userData = {}) {
     const user = new User({ clerkId, ...userData });
     await user.save();
 
-    const wallet = new Wallet({ userId: clerkId, balance: 12450.0 });
+    const wallet = new Wallet({ userId: clerkId, balance: 25000.0 });
     await wallet.save();
 
     const defaultBanks = [
@@ -27,6 +27,7 @@ async function provisionNewUser(clerkId, userData = {}) {
         last4: '8829',
         expiry: '12/26',
         status: 'active',
+        balance: 5000.0
     });
     await card.save();
 
@@ -52,8 +53,16 @@ exports.getUser = async (req, res) => {
         let user = await User.findOne({ clerkId });
         if (!user) user = await provisionNewUser(clerkId);
 
-        const [wallet, banks, cards] = await Promise.all([
-            Wallet.findOne({ userId: clerkId }),
+        let wallet = await Wallet.findOne({ userId: clerkId });
+        if (!wallet) {
+            wallet = new Wallet({ userId: clerkId, balance: 25000.0 });
+            await wallet.save();
+        } else if (wallet.balance === 0) {
+            wallet.balance = 25000.0;
+            await wallet.save();
+        }
+
+        const [banks, cards] = await Promise.all([
             BankAccount.find({ userId: clerkId }),
             Card.find({ userId: clerkId }),
         ]);

@@ -116,16 +116,15 @@ export default function Sidebar() {
         {/* User Footer Profile */}
         {user && (
           <div className="p-6 border-t border-border-main flex items-center gap-3.5 bg-text-primary/2">
-            <div className="relative">
+            <div className="relative shrink-0">
               <img
                 src={user.imageUrl}
                 alt={user.fullName}
-                className="w-10 h-10 rounded-lg object-cover shrink-0 border border-border-main"
+                className="w-10 h-10 rounded-lg object-cover border border-border-main"
               />
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-accent-green border-2 border-bg-main rounded-full" />
             </div>
             <div className="overflow-hidden">
-              <div className="text-[14px] font-black text-text-primary truncate font-heading tracking-tight leading-none">
+              <div className="text-[14px] font-black text-text-primary truncate font-heading tracking-tight leading-none uppercase">
                 {user.firstName || user.username}
               </div>
             </div>

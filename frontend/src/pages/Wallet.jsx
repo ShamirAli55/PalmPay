@@ -7,6 +7,7 @@ import {
   ShoppingBag, Briefcase, UtensilsCrossed, CreditCard
 } from "lucide-react";
 import VaultActions from "../components/ui/VaultActions";
+import PalmScanner from "../components/ui/PalmScanner";
 import { MY_CARDS, CONNECTED_BANKS } from "../constants/index";
 
 const MERCHANT_ICONS = {
@@ -43,42 +44,67 @@ function CardVisual({ card, isActive, onClick }) {
   );
 }
 
-function VirtualCardSettings({ card }) {
+function VirtualCardSettings({ card, onToggleFreeze }) {
   const [revealed, setRevealed] = useState(false);
   if (!card) return null;
 
+  const isFrozen = card.status === 'frozen';
+
   return (
-    <div className="bg-bg-card border border-border-main rounded-2xl p-6 flex flex-col md:flex-row gap-6 flex-1 shadow-sm">
+    <div className="bg-bg-card border border-border-main rounded-2xl p-6 flex flex-col md:flex-row gap-6 flex-1 shadow-sm relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-3xl pointer-events-none" style={{ background: card.color }} />
       <div
         onClick={() => setRevealed(!revealed)}
+        style={{ borderColor: revealed ? card.color + '44' : 'var(--border-main)' }}
         className="w-full md:w-44 bg-text-primary/5 border border-border-main rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer p-6 shrink-0 transition-all active:scale-95 hover:bg-text-primary/10"
       >
-        {revealed ? <Eye size={22} className="text-accent-blue" /> : <EyeOff size={22} className="text-text-secondary" />}
+        {revealed ? <Eye size={22} style={{ color: card.color }} /> : <EyeOff size={22} className="text-text-secondary" />}
         <span className="text-[10px] text-text-secondary tracking-[0.2em] uppercase font-bold text-center font-heading">
           {revealed ? "HIDE CARD DETAILS" : "VIEW CARD DETAILS"}
         </span>
         <span className={`text-text-primary font-bold font-mono text-center whitespace-nowrap px-2 ${revealed ? "text-[13px] tracking-normal" : "text-[13px] tracking-normal"}`}>
-          {revealed ? `4532 8812 0041 ${card.last4}` : `•••• •••• •••• ${card.last4}`}
+          {revealed ? `${card.brand === 'MASTERCARD' ? '5412' : '4532'} ${card.last4} 0041 ${card.last4}` : `•••• •••• •••• ${card.last4}`}
         </span>
       </div>
+
       <div className="flex-1">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-base font-bold text-text-primary font-heading uppercase tracking-tight">{card.label}</span>
-          <span className={`text-[10px] font-bold rounded-lg px-2.5 py-1 tracking-widest uppercase ${card.status === 'active' ? 'bg-accent-green/10 text-accent-green' : 'bg-red-500/10 text-red-500'}`}>
-            {card.status}
-          </span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className="text-base font-bold text-text-primary font-heading uppercase tracking-tight">{card.label}</span>
+            <span 
+              className="text-[10px] font-bold rounded-lg px-2.5 py-1 tracking-widest uppercase"
+              style={{ background: card.color + '15', color: card.color }}
+            >
+              {!isFrozen ? 'ACTIVE' : 'FROZEN'}
+            </span>
+          </div>
+          <button 
+            onClick={() => onToggleFreeze(card)}
+            style={{ 
+                background: isFrozen ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                color: isFrozen ? '#22c55e' : '#ef4444'
+            }}
+            className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:opacity-80 active:scale-95"
+          >
+            {isFrozen ? 'UNFREEZE CARD' : 'FREEZE CARD'}
+          </button>
         </div>
         <p className="text-[13px] text-text-secondary leading-relaxed mb-4 font-medium">
           Manage your {card.brand || card.network} secure identity. Your {(card.cardType || 'Virtual').toLowerCase()} card details are protected by Palm recognition and anti-fraud protocols.
         </p>
         <div className="flex flex-wrap gap-2">
-          {[`EXPIRY: ${card.expiry}`, `LIMIT: Rs. 50,000`, card.frozen ? "FROZEN" : "ACTIVE"].map((tag) => (
-            <span key={tag} className="text-[10px] font-bold text-text-secondary bg-text-primary/5 border border-border-main rounded-lg px-3 py-1.5 font-heading tracking-widest">
+          {[`EXPIRY: ${card.expiry}`, `LIMIT: Rs. 50,000`, isFrozen ? "FROZEN" : "ACTIVE"].map((tag) => (
+            <span 
+                key={tag} 
+                className="text-[10px] font-bold text-text-secondary bg-text-primary/5 border border-border-main rounded-lg px-3 py-1.5 font-heading tracking-widest"
+                style={tag === "ACTIVE" ? { color: '#22c55e', background: 'rgba(34, 197, 94, 0.05)' } : {}}
+            >
               {tag}
             </span>
           ))}
         </div>
       </div>
+
     </div>
   );
 }
@@ -100,16 +126,30 @@ function PalmIDPanel() {
 
 export default function Wallet() {
   const { user } = useUser();
-  const { balance, fetchData, linkedBanks, cards, activeCardId, setActiveCard } = useWalletStore();
   const navigate = useNavigate();
+  const { balance, fetchData, linkedBanks, cards, activeCardId, setActiveCard, toggleCardFreeze } = useWalletStore();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [pendingCard, setPendingCard] = useState(null);
+  const [showAllCards, setShowAllCards] = useState(false);
 
   useEffect(() => {
     if (user) fetchData(user.id);
   }, [user, fetchData]);
 
+  const handleToggleFreeze = (card) => {
+    if (card.status === 'frozen') {
+      setPendingCard(card);
+      setIsScannerOpen(true);
+    } else {
+      toggleCardFreeze(card.id);
+    }
+  };
+
+  const displayedCards = showAllCards ? cards : cards.slice(0, 2);
+
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen">
-      {/* Hero */}
+      {/* ... Hero Section remains same ... */}
       <div className="bg-bg-card border border-border-main rounded-2xl p-8 lg:p-10 flex flex-col xl:flex-row justify-between items-center gap-8 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent-blue/5 rounded-full blur-[100px] -mr-32 -mt-32" />
         <div className="relative z-10 text-center xl:text-left">
@@ -123,21 +163,34 @@ export default function Wallet() {
         <VaultActions mode="wallet" className="justify-center xl:justify-end shrink-0 relative z-10" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 bg-bg-card border border-border-main rounded-2xl p-6 lg:p-8 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <span className="text-[17px] font-bold text-text-primary font-heading tracking-tight">My Cards</span>
-            <button className="text-[12px] font-bold text-accent-green hover:underline uppercase tracking-widest font-heading cursor-pointer">Manage</button>
+            <div className="flex gap-4">
+              {cards.length > 2 && (
+                  <button 
+                      onClick={() => setShowAllCards(!showAllCards)}
+                      className="text-[12px] font-bold text-accent-green hover:underline uppercase tracking-widest font-heading cursor-pointer"
+                  >
+                      {showAllCards ? "Show Less" : `View All (${cards.length})`}
+                  </button>
+              )}
+              <button 
+                onClick={() => navigate("/add-card")}
+                className="flex items-center gap-1.5 text-[12px] font-bold text-accent-blue hover:underline uppercase tracking-widest font-heading cursor-pointer"
+              >
+                <Plus size={14} /> Request Card
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col md:flex-row gap-4">
-            {cards.map((card) => (
+          <div className="flex flex-wrap gap-4">
+            {displayedCards.map((card) => (
               <CardVisual key={card.id} card={card} isActive={activeCardId === card.id} onClick={() => setActiveCard(card.id)} />
             ))}
           </div>
         </div>
 
-        {/* Banks */}
         <div className="lg:col-span-1 bg-bg-card border border-border-main rounded-2xl p-6 lg:p-8 shadow-sm">
           <div className="text-[17px] font-bold text-text-primary mb-6 font-heading tracking-tight">Linked Bank Accounts</div>
           <div className="divide-y divide-border-main">
@@ -152,22 +205,30 @@ export default function Wallet() {
                     <div className="text-[10px] text-text-secondary font-bold tracking-widest opacity-50 uppercase">••• {bank.last4}</div>
                   </div>
                 </div>
-                <span className="text-[15px] font-bold text-text-primary font-heading tracking-tighter">
-                  Rs. {bank.balance.toLocaleString()}
-                </span>
+                <span className="text-[15px] font-bold text-text-primary font-heading tracking-tighter">Rs. {bank.balance.toLocaleString()}</span>
               </div>
             ))}
           </div>
-          <button className="w-full mt-6 flex items-center justify-center gap-2 py-4 bg-transparent border border-dashed border-border-main rounded-xl text-text-secondary hover:text-text-primary hover:border-text-primary/30 transition-all text-[11px] font-bold uppercase tracking-widest font-heading cursor-pointer">
-            <Plus size={15} /> Add Bank Account
-          </button>
         </div>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6">
-        <VirtualCardSettings card={cards.find(c => c.id === activeCardId) || cards[0]} />
+        <VirtualCardSettings 
+          card={cards.find(c => c.id === activeCardId) || cards[0]} 
+          onToggleFreeze={handleToggleFreeze}
+        />
         <PalmIDPanel />
       </div>
+
+      <PalmScanner 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        mode="verify"
+        onVerified={() => {
+          if (pendingCard) toggleCardFreeze(pendingCard.id);
+          setPendingCard(null);
+        }}
+      />
     </div>
   );
 }

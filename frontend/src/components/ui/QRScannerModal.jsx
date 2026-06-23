@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
-import { X, Shield } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
+import { X, Shield, Camera } from "lucide-react";
 
 export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
   const scannerRef = useRef(null);
@@ -8,25 +8,43 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
   useEffect(() => {
     if (!isOpen) return;
 
-    const scanner = new Html5QrcodeScanner(
-      "qr-reader",
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      /* verbose= */ false
-    );
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    scannerRef.current = html5QrCode;
 
-    const onScan = (decodedText) => {
-      scanner.clear().then(() => {
-        onScanSuccess(decodedText);
-        onClose();
-      }).catch(err => console.error("Scanner clear error", err));
+    const startScanner = async () => {
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" }, // Force back camera
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            onScanSuccess(decodedText);
+            stopScanner();
+          },
+          (errorMessage) => {
+            // Silence noise
+          }
+        );
+      } catch (err) {
+        console.error("Unable to start scanner", err);
+      }
     };
 
-    scanner.render(onScan, (err) => {
-        // Optional: handle scan error
-    });
+    const stopScanner = async () => {
+      if (scannerRef.current?.isScanning) {
+        await scannerRef.current.stop();
+        onClose();
+      }
+    };
+
+    startScanner();
 
     return () => {
-        scanner.clear().catch(err => { });
+      if (scannerRef.current?.isScanning) {
+        scannerRef.current.stop();
+      }
     };
   }, [isOpen]);
 

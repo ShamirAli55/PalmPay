@@ -84,18 +84,20 @@ async def enroll(user_id: str, file: UploadFile = File(...)):
     data = await file.read()
     emb  = embed_image(data).tolist()
 
+    # Single-scan enroll: replace any previous embedding with this one.
     users_col.update_one(
         {"user_id": user_id},
         {
-            "$push": {"embeddings": emb},
-            "$set":  {"updated_at": datetime.utcnow()},
+            "$set":  {
+                "embeddings": [emb],        # always a single fresh embedding
+                "updated_at": datetime.utcnow(),
+            },
             "$setOnInsert": {"created_at": datetime.utcnow(), "user_id": user_id},
         },
         upsert=True,
     )
 
-    doc = users_col.find_one({"user_id": user_id})
-    return {"status": "enrolled", "samples": len(doc["embeddings"])}
+    return {"status": "enrolled", "samples": 1}
 
 
 @app.post("/verify/{user_id}")
@@ -112,7 +114,6 @@ async def verify(user_id: str, file: UploadFile = File(...)):
 
     sims  = [cosine(probe, e) for e in doc["embeddings"]]
     best  = max(sims)
-
     return {
         "accepted":   bool(best >= THRESHOLD),
         "similarity": round(best, 4),

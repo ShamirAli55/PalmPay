@@ -11,6 +11,8 @@ const CardSchema = new mongoose.Schema({
     cvv: { type: String }, // In real apps, this should never be stored or be heavily encrypted
     status: { type: String, enum: ['active', 'blocked', 'frozen', 'expired'], default: 'active' },
     color: { type: String, default: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' },
+    spendLimit: { type: Number, default: 50000 },
+    balance: { type: Number, default: 0 },
     settings: {
         onlinePayments: { type: Boolean, default: true },
         internationalPayments: { type: Boolean, default: false },

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { Shield, ChevronRight, Plus, ScanLine, Wallet, Loader2 } from "lucide-react";
+import { Shield, ChevronRight, Plus, ScanLine, Wallet, Loader2, ArrowLeft } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import PalmScanner from "../components/ui/PalmScanner";
 import QRScannerModal from "../components/ui/QRScannerModal";
@@ -10,40 +10,42 @@ const QUICK_AMOUNTS = [200, 500, 1000, 5000];
 
 export default function Send() {
   const { user } = useUser();
-  const { balance, sendMoney, loading, users, fetchUsers } = useWalletStore();
+  const navigate = useNavigate();
+  const { balance, sendMoney, loading, users, fetchUsers, linkedBanks } = useWalletStore();
   const [selectedContact, setSelectedContact] = useState(null);
+  const [selectedBank, setSelectedBank] = useState(null);
   const [amount, setAmount] = useState("100.00");
   const [description, setDescription] = useState("");
   const [success, setSuccess] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const handleQRScan = (decodedId) => {
-    const found = users.find(u => u.clerkId === decodedId);
-    if (found) {
-        setSelectedContact(decodedId);
+  const handleQRScan = (decodedText) => {
+    if (decodedText.startsWith("PALM_PAY|")) {
+      const [, clerkId, requestedAmount] = decodedText.split("|");
+      const found = (users || []).find(u => u.clerkId === clerkId);
+      if (found) {
+        setSelectedContact(clerkId);
+        if (requestedAmount) setAmount(parseFloat(requestedAmount).toFixed(2));
+      }
     } else {
-        setSelectedContact(decodedId);
+      const found = (users || []).find(u => u.clerkId === decodedText);
+      if (found) setSelectedContact(decodedText);
     }
   };
 
-  // Set first contact as default when users load
   useEffect(() => {
-    if (users.length > 0 && !selectedContact) {
-        const firstOtherUser = users.find(u => u.clerkId !== user?.id);
-        if (firstOtherUser) setSelectedContact(firstOtherUser.clerkId);
+    if ((users || []).length > 0 && !selectedContact && !success) {
+      const firstOther = (users || []).find(u => u.clerkId !== user?.id);
+      if (firstOther) setSelectedContact(firstOther.clerkId);
     }
-  }, [users, user, selectedContact]);
+  }, [users, user, selectedContact, success]);
 
   const handleSendRequest = () => {
-    const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount < 100) return;
-    if (numAmount > balance) return;
+    const n = parseFloat(amount);
+    if (!n || n < 100 || n > balance) return;
     setIsScannerOpen(true);
   };
 
@@ -57,175 +59,325 @@ export default function Send() {
 
   const handleAmountBlur = () => {
     const num = parseFloat(amount);
-    if (!isNaN(num)) {
-      setAmount(num.toFixed(2));
-    } else {
-      setAmount("100.00");
-    }
+    setAmount(!isNaN(num) ? num.toFixed(2) : "100.00");
   };
 
   const getInitials = (name) => {
     if (!name) return "??";
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   const onScanVerified = async (palmImageBlob) => {
     const numAmount = parseFloat(amount);
-    const recipient = users.find(u => u.clerkId === selectedContact);
-    
+    const recipient = (users || []).find(u => u.clerkId === selectedContact);
+    const bank = linkedBanks.find(b => b.id === selectedBank);
     const result = await sendMoney(user.id, {
-        recipientId: selectedContact,
-        recipient: recipient?.name || 'Unknown',
-        amount: numAmount,
-        description: description,
-        category: 'Transfer'
+      recipientId: selectedContact,
+      bankId: selectedBank,
+      recipient: selectedBank ? (bank?.name || "Bank") : (recipient?.name || "Unknown"),
+      amount: numAmount,
+      description,
+      category: selectedBank ? "Withdrawal" : "Transfer",
     }, palmImageBlob);
-
     if (result) setSuccess(true);
   };
 
   return (
-    <div className="flex flex-col gap-6 p-0 lg:p-2 min-h-screen max-w-4xl mx-auto">
-      {/* Header telemetry */}
-      <div className="flex items-center justify-between px-2">
-         <div className="flex items-center gap-2.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse shadow-[0_0_8px_var(--accent-green)]" />
-            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Secure Connection</span>
-         </div>
-         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30">P-ID v4.0</span>
+    <div className="flex flex-col gap-4 p-0 lg:p-2 min-h-screen max-w-2xl mx-auto w-full">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 pt-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary hover:border-accent-blue/30 transition-all active:scale-95 shadow-sm"
+          >
+            <ArrowLeft size={17} />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-accent-green shadow-[0_0_8px_var(--accent-green)]" />
+            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+              Secure Connection
+            </span>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading opacity-30 hidden sm:block">
+          P-ID v4.0
+        </span>
       </div>
 
-      <div className="flex-1 w-full max-w-2xl mx-auto">
-        <div className="bg-bg-card border border-border-main rounded-2xl p-6 sm:p-10 shadow-xl relative overflow-hidden group transition-all">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-blue/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-          
-          <div className="mb-10 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading">Send Money</h1>
-            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Authorize payment using palm recognition</p>
+      {/* Main Card */}
+      <div className="flex-1 w-full px-3 sm:px-0">
+        <div className="bg-bg-card border border-border-main rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden transition-all">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-accent-blue/5 rounded-full blur-[60px] -mr-24 -mt-24 pointer-events-none" />
+
+          {/* Title */}
+          <div className="mb-7 text-center">
+            <h1 className="text-xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading">Send Money</h1>
+            <p className="text-[10px] text-text-secondary mt-1.5 font-medium uppercase tracking-[0.2em] opacity-60">
+              Authorize payment using palm recognition
+            </p>
           </div>
 
+          {/* ── Success State ────────────────────────────────────── */}
           {success ? (
-            <div className="text-center py-8 animate-in zoom-in-95 duration-500">
-              <div className="w-20 h-20 bg-accent-green/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent-green/20 shadow-xl shadow-accent-green/10">
-                <Shield className="text-accent-green w-10 h-10" />
+            <div className="text-center py-6 animate-in zoom-in-95 duration-500">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-accent-green/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-accent-green/20 shadow-xl shadow-accent-green/10">
+                <Shield className="text-accent-green w-8 h-8 sm:w-10 sm:h-10" />
               </div>
-              <h2 className="text-text-primary text-2xl font-bold mb-3 font-heading tracking-tight">Transfer Successful</h2>
-              <p className="text-text-secondary text-[14px] mb-10 font-medium leading-relaxed">
+              <h2 className="text-text-primary text-xl sm:text-2xl font-bold mb-3 font-heading tracking-tight">
+                Transfer Successful
+              </h2>
+              <p className="text-text-secondary text-[13px] sm:text-[14px] mb-8 font-medium leading-relaxed">
                 Your identity has been verified.<br />
                 <span className="text-text-primary font-bold">Rs. {parseFloat(amount).toLocaleString()}</span> sent to<br />
-                <span className="text-accent-blue font-bold uppercase tracking-tight">{users.find(u => u.clerkId === selectedContact)?.name}</span>
+                <span className="text-accent-blue font-bold uppercase tracking-tight">
+                  {users.find(u => u.clerkId === selectedContact)?.name}
+                </span>
               </p>
-              <button 
+              <button
                 onClick={() => navigate("/dashboard")}
-                className="w-full sm:w-64 px-10 py-4 bg-accent-blue text-white rounded-xl font-bold hover:brightness-110 transition-all active:scale-95 shadow-xl shadow-accent-blue/20 font-heading uppercase tracking-widest text-[11px]"
+                className="w-full sm:w-auto px-10 py-4 bg-accent-blue text-white rounded-xl font-bold hover:brightness-110 transition-all active:scale-95 shadow-xl shadow-accent-blue/20 font-heading uppercase tracking-widest text-[11px]"
               >
                 Return to Dashboard
               </button>
             </div>
+
           ) : (
-            <div className="flex flex-col gap-10">
-              {/* Contacts Selection */}
-              <div>
-                <div className="flex justify-between items-end mb-6 px-1">
-                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Recipients</div>
-                    <div className="flex gap-4">
-                        <button 
-                            onClick={() => setIsQRScannerOpen(true)}
-                            className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125 flex items-center gap-1.5"
-                        >
-                            <ScanLine size={14} /> SCAN QR
-                        </button>
-                        <button className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125">SEARCH USER</button>
-                    </div>
+            <div className="flex flex-col gap-7">
+
+              {/* ── Section 1: Recipient ─────────────────────────── */}
+              <div className="space-y-4">
+                {/* Label row */}
+                <div className="flex justify-between items-center px-0.5">
+                  <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+                    Recipient
+                  </span>
+                  <button
+                    onClick={() => setIsQRScannerOpen(true)}
+                    className="text-accent-blue text-[10px] font-bold uppercase tracking-widest hover:brightness-125 flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <ScanLine size={13} /> Scan QR
+                  </button>
                 </div>
-                <div className="flex gap-10 overflow-x-auto pb-6 -mx-2 px-2 no-scrollbar">
-                  {users.filter(u => u.clerkId !== user?.id).map((u) => (
-                    <button
-                      key={u.clerkId}
-                      onClick={() => setSelectedContact(u.clerkId)}
-                      className={`flex flex-col items-center gap-4 shrink-0 flex-none group transition-all relative ${selectedContact === u.clerkId ? "z-20" : "z-10"}`}
-                    >
-                      <div 
-                        className={`w-14 h-14 aspect-square rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 transform ${selectedContact === u.clerkId ? "bg-accent-blue text-white shadow-xl scale-110 border-2 border-white/10" : "bg-text-primary/10 text-text-secondary opacity-60 hover:opacity-100 hover:bg-text-primary/20"}`}
-                      >
-                        {getInitials(u.name)}
+
+                {/* Search input */}
+                <div className="relative group">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-accent-blue transition-colors">
+                    <Plus size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Phone number or Wallet ID"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const found = (users || []).find(
+                        u => u.phone === val || u.clerkId === val || u.name?.toLowerCase().includes(val.toLowerCase())
+                      );
+                      if (found) setSelectedContact(found.clerkId);
+                    }}
+                    className="w-full bg-text-primary/5 border border-border-main rounded-xl py-4 pl-10 pr-4 text-[13px] text-text-primary font-bold outline-none focus:border-accent-blue/50 transition-all font-heading placeholder:font-normal"
+                  />
+                </div>
+
+                {/* Contact / bank picker */}
+                <div>
+                  {/* No selection: show quick contacts + banks */}
+                  {!selectedContact && !selectedBank && (
+                    <div className="flex flex-col gap-5 animate-in fade-in duration-300">
+                      {/* Quick contacts horizontal scroll */}
+                      <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+                        {(users || []).filter(u => u.clerkId !== user?.id).slice(0, 6).map((u) => (
+                          <button
+                            key={u.clerkId}
+                            onClick={() => setSelectedContact(u.clerkId)}
+                            className="flex items-center gap-2 bg-text-primary/5 border border-border-main/50 pr-4 py-2 pl-2 rounded-xl hover:bg-text-primary/10 hover:border-accent-blue/20 transition-all shrink-0 active:scale-95"
+                          >
+                            <div className="w-7 h-7 rounded-full bg-accent-blue/20 flex items-center justify-center text-[10px] font-bold text-accent-blue shrink-0">
+                              {getInitials(u.name)}
+                            </div>
+                            <span className="text-[11px] font-bold text-text-primary uppercase tracking-tight whitespace-nowrap">
+                              {u.name?.split(" ")[0]}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-                      <span className={`text-[10px] font-bold tracking-tight transition-all duration-300 uppercase whitespace-nowrap ${selectedContact === u.clerkId ? "text-text-primary" : "text-text-secondary opacity-0 group-hover:opacity-100"}`}>{u.name ? u.name.split(' ')[0] : 'User'}</span>
-                    </button>
-                  ))}
+
+                      {/* Banks */}
+                      {linkedBanks.length > 0 && (
+                        <div className="space-y-2.5">
+                          <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+                            Withdraw to Bank
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {linkedBanks.map((bank) => (
+                              <button
+                                key={bank.id}
+                                onClick={() => setSelectedBank(bank.id)}
+                                className="bg-text-primary/5 border border-border-main rounded-xl p-3.5 flex items-center justify-between hover:border-accent-blue/40 hover:bg-text-primary/10 transition-all active:scale-[0.98] group"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-xl bg-bg-card border border-border-main flex items-center justify-center text-text-secondary group-hover:text-accent-blue group-hover:border-accent-blue/20 transition-all shrink-0">
+                                    <Wallet size={16} />
+                                  </div>
+                                  <div className="text-left">
+                                    <div className="text-[12px] font-bold text-text-primary uppercase tracking-tight">{bank.name}</div>
+                                    <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-50">••• {bank.last4}</div>
+                                  </div>
+                                </div>
+                                <ChevronRight size={14} className="text-text-secondary group-hover:text-accent-blue transition-all shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Selected contact preview */}
+                  {selectedContact && !selectedBank && (() => {
+                    const contact = (users || []).find(u => u.clerkId === selectedContact);
+                    if (!contact) return null;
+                    return (
+                      <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-xl p-4 flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
+                        <div className="w-11 h-11 rounded-full bg-accent-blue/20 flex items-center justify-center text-[14px] font-bold text-accent-blue shrink-0">
+                          {getInitials(contact.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14px] font-bold text-text-primary truncate">{contact.name}</div>
+                          <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-60 truncate">
+                            {contact.phone || contact.clerkId?.slice(0, 16) + "…"}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedContact(null)}
+                          className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Selected bank preview */}
+                  {selectedBank && (() => {
+                    const bank = linkedBanks.find(b => b.id === selectedBank);
+                    if (!bank) return null;
+                    return (
+                      <div className="bg-accent-green/5 border border-accent-green/20 rounded-xl p-4 flex items-center gap-4 relative overflow-hidden animate-in slide-in-from-top-2 duration-300">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-accent-green/5 rounded-full blur-2xl -mr-12 -mt-12" />
+                        <div className="w-11 h-11 rounded-xl bg-accent-green flex items-center justify-center text-white text-base font-black shadow-md shadow-accent-green/20 relative z-10 shrink-0">
+                          {bank.name[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 z-10 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="text-[14px] font-bold text-text-primary m-0 tracking-tight truncate">{bank.name}</h3>
+                            <div className="w-3.5 h-3.5 bg-accent-green rounded-full flex items-center justify-center shrink-0">
+                              <Shield size={8} className="text-white" />
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-text-secondary mt-0.5 font-bold uppercase tracking-widest opacity-60">
+                            ••• {bank.last4}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedBank(null)}
+                          className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1 z-10"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
-              {/* Amount Input Section */}
-              <div className="bg-text-primary/5 rounded-2xl p-8 sm:p-10 border border-border-main relative overflow-hidden">
-                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-6 block font-heading relative z-10">Amount (Rs.)</label>
-                <div className="relative flex items-center justify-center z-10">
-                  <span className="text-2xl font-bold text-text-secondary/40 mr-4 font-heading">Rs.</span>
+              {/* ── Section 2: Amount ────────────────────────────── */}
+              <div className="bg-text-primary/5 rounded-2xl p-5 sm:p-7 border border-border-main relative overflow-hidden">
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-4 block font-heading relative z-10">
+                  Amount (Rs.)
+                </label>
+
+                {/* Amount input */}
+                <div className="relative flex items-baseline gap-2 z-10 overflow-hidden">
+                  <span className="text-lg sm:text-xl font-bold text-text-secondary/40 font-heading shrink-0">Rs.</span>
                   <input
                     value={amount}
                     onChange={(e) => handleAmountChange(e.target.value)}
                     onBlur={handleAmountBlur}
-                    className="w-full bg-transparent border-none p-0 text-4xl sm:text-5xl font-bold text-text-primary tracking-tighter outline-none font-heading"
+                    inputMode="decimal"
+                    className="flex-1 min-w-0 bg-transparent border-none p-0 text-3xl sm:text-5xl font-bold text-text-primary tracking-tighter outline-none font-heading"
                     placeholder="0.00"
                   />
                 </div>
 
-                <div className="flex gap-3 mt-8 overflow-x-auto no-scrollbar relative z-10">
-                   {QUICK_AMOUNTS.map(val => (
-                      <button 
-                        key={val}
-                        onClick={() => setAmount(val.toFixed(2))}
-                        className="px-6 py-2.5 rounded-xl bg-text-primary/5 border border-border-main text-[12px] font-bold text-text-primary hover:bg-accent-blue hover:text-white hover:border-accent-blue transition-all whitespace-nowrap"
-                      >
-                        Rs. {val}
-                      </button>
-                   ))}
+                {/* Quick amount chips */}
+                <div className="flex gap-2 mt-5 overflow-x-auto no-scrollbar relative z-10 pb-0.5">
+                  {QUICK_AMOUNTS.map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setAmount(val.toFixed(2))}
+                      className="px-4 py-2 rounded-lg bg-text-primary/5 border border-border-main text-[11px] font-bold text-text-primary hover:bg-accent-blue hover:text-white hover:border-accent-blue transition-all whitespace-nowrap active:scale-95"
+                    >
+                      Rs.{val}
+                    </button>
+                  ))}
                 </div>
 
-                <div className="flex justify-between mt-8 items-center pt-8 border-t border-text-primary/5 relative z-10">
+                {/* Available balance row */}
+                <div className="flex justify-between mt-5 items-center pt-5 border-t border-text-primary/5 relative z-10">
                   <div className="flex flex-col">
-                     <span className="text-[9px] text-text-secondary font-bold uppercase tracking-widest">Available</span>
-                     <span className="text-[12px] font-bold text-text-primary">Rs. {balance.toLocaleString()}</span>
+                    <span className="text-[9px] text-text-secondary font-bold uppercase tracking-widest">Available</span>
+                    <span className="text-[13px] font-bold text-text-primary">Rs. {balance.toLocaleString()}</span>
                   </div>
-                  <button onClick={() => setAmount(balance.toFixed(2))} className="px-5 py-2 rounded-lg bg-text-primary/5 text-[10px] font-bold text-accent-blue hover:bg-accent-blue hover:text-white transition-all uppercase tracking-widest font-heading">MAX</button>
+                  <button
+                    onClick={() => setAmount(balance.toFixed(2))}
+                    className="px-4 py-2 rounded-lg bg-text-primary/5 text-[10px] font-bold text-accent-blue hover:bg-accent-blue hover:text-white transition-all uppercase tracking-widest font-heading active:scale-95"
+                  >
+                    MAX
+                  </button>
                 </div>
               </div>
 
-              {/* Memo */}
-              <div className="px-1">
-                <input 
-                   value={description}
-                   onChange={e => setDescription(e.target.value)}
-                   placeholder="Purpose of transfer (optional)"
-                   className="w-full bg-transparent border-b border-border-main py-3 text-[14px] text-text-primary font-medium outline-none focus:border-accent-blue transition-all placeholder:text-text-secondary/30"
+              {/* ── Section 3: Memo ──────────────────────────────── */}
+              <div>
+                <input
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Purpose of transfer (optional)"
+                  className="w-full bg-transparent border-b border-border-main py-3 text-[13px] sm:text-[14px] text-text-primary font-medium outline-none focus:border-accent-blue transition-all placeholder:text-text-secondary/30"
                 />
               </div>
 
-              <div className="pt-2">
-                <button
-                  onClick={handleSendRequest}
-                  disabled={!amount || parseFloat(amount) < 100 || loading}
-                  className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-xl text-white text-sm font-bold tracking-[0.2em] shadow-lg active:scale-[0.99] transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
-                >
-                  <div className="flex items-center gap-2.5">
-                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Shield size={18} />} 
-                    <span>{loading ? "Processing..." : "Send Payment"}</span>
-                  </div>
-                  {!loading && parseFloat(amount) < 100 && <span className="text-[9px] opacity-60">Min Rs. 100</span>}
-                </button>
-              </div>
+              {/* ── Send Button ──────────────────────────────────── */}
+              <button
+                onClick={handleSendRequest}
+                disabled={!amount || parseFloat(amount) < 100 || loading}
+                className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-2xl text-white text-[12px] font-bold tracking-[0.25em] shadow-xl shadow-accent-blue/20 active:scale-95 transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
+              >
+                <div className="flex items-center gap-3">
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : <Shield size={20} />}
+                  <span>{loading ? "Processing..." : "Send Payment"}</span>
+                </div>
+                {!loading && parseFloat(amount) < 100 && (
+                  <span className="text-[9px] opacity-60 normal-case tracking-normal">
+                    Minimum Transfer: Rs. 100
+                  </span>
+                )}
+              </button>
+
             </div>
           )}
         </div>
       </div>
 
-      <PalmScanner 
-        isOpen={isScannerOpen} 
+      <PalmScanner
+        isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onVerified={onScanVerified}
       />
 
-      <QRScannerModal 
+      <QRScannerModal
         isOpen={isQRScannerOpen}
         onClose={() => setIsQRScannerOpen(false)}
         onScanSuccess={handleQRScan}
@@ -233,5 +385,3 @@ export default function Send() {
     </div>
   );
 }
-
-

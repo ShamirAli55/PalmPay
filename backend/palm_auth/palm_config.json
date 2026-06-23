@@ -1,5 +1,5 @@
 {
-    "threshold": 0.723963,
+    "threshold": 0.82,
     "embed_dim": 128,
     "img_size": 128,
     "normalize": {
