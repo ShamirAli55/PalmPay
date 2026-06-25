@@ -38,8 +38,12 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
   // palmReady = true when MediaPipe sees any hand at all
   const [palmReady, setPalmReady] = useState(false);
   const [mpLoaded, setMpLoaded] = useState(false);
+  // Multi-sample enrollment tracking
+  const ENROLL_REQUIRED = 5;  // 5 explicit scans to build a robust template
+  const VERIFY_FRAMES   = 4;  // frames silently captured during one 'long scan'
+  const [enrollSamplesCount, setEnrollSamplesCount] = useState(0);
 
-  const { enroll, verify, enrolling, verifying } = usePalmStore();
+  const { enroll, verifyMulti, enrolling, verifying } = usePalmStore();
   const { user } = useUser();
 
   // ── Load MediaPipe Hands (once, app-wide) ──────────────────────────────────
@@ -60,9 +64,37 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
         minTrackingConfidence: 0.5,
       });
       hands.onResults((results) => {
-        // Simply: if any landmarks detected → a hand is visible → palmReady
-        const handVisible = (results.multiHandLandmarks?.length ?? 0) > 0;
-        setPalmReady(handVisible);
+        // ── Advanced Hand Validation ─────────────────────────────────────────
+        const landmarks = results.multiHandLandmarks?.[0];
+        const handedness = results.multiHandedness?.[0]; // Left/Right label
+
+        if (!landmarks || !handedness) {
+          setPalmReady(false);
+          return;
+        }
+
+        // 1. Check if hand is open (fingers extended)
+        // Compare finger tips (8, 12, 16, 20) with their bases (5, 9, 13, 17)
+        const isHandOpen = 
+          landmarks[8].y < landmarks[5].y && 
+          landmarks[12].y < landmarks[9].y &&
+          landmarks[16].y < landmarks[13].y &&
+          landmarks[20].y < landmarks[17].y;
+
+        // 2. Check if palm is facing the camera
+        // In MediaPipe, for the PALM side, the thumb (4) and pinky (20) 
+        // follow a specific order relative to the wrist (0)
+        const isPalmFacing = handedness.label === "Right" 
+          ? landmarks[4].x < landmarks[20].x  // Right hand palm facing
+          : landmarks[4].x > landmarks[20].x; // Left hand palm facing
+
+        // 3. Size check (not too far, not too close)
+        const wrist = landmarks[0];
+        const middleBase = landmarks[9];
+        const handSize = Math.sqrt(Math.pow(wrist.x - middleBase.x, 2) + Math.pow(wrist.y - middleBase.y, 2));
+        const isSizeValid = handSize > 0.1 && handSize < 0.4;
+
+        setPalmReady(isHandOpen && isPalmFacing && isSizeValid);
       });
       handsRef.current = hands;
       setMpLoaded(true);
@@ -89,29 +121,31 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     setStatus("Starting camera...");
 
     const constraints = [
-      { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 1280 } } },
+      { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+      { video: { facingMode: facingMode } },
       { video: true },
     ];
 
     let mediaStream = null;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setStatus("Security Block");
-      setInstruction("HTTPS is required for camera access. Please use 'https://' and accept the SSL certificate.");
+      setInstruction("HTTPS is required for camera access. Please use 'https://' or setup a local cert.");
       return;
     }
 
     for (const c of constraints) {
       try {
+        console.log("Trying camera constraint:", c);
         mediaStream = await navigator.mediaDevices.getUserMedia(c);
         if (mediaStream) break;
       } catch (err) {
-        console.warn("Camera constraint failed:", c);
+        console.error("Constraint failed:", err.name, err.message);
       }
     }
 
     if (!mediaStream) {
-      setStatus("Camera Access Failed");
-      setInstruction("Could not access camera. Check permissions or if another app is using it.");
+      setStatus("Camera failed");
+      setInstruction("Please ensure your camera is not in use by another app.");
       return;
     }
 
@@ -133,6 +167,7 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     setGuideColor("var(--accent-blue)");
     setIsSuccess(false);
     setPalmReady(false);
+    setEnrollSamplesCount(0);
   };
 
   // ── Live hand-presence check every 700 ms ─────────────────────────────────
@@ -170,9 +205,25 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
   };
 
+  // Capture a frame after a delay (used for multi-frame verification)
+  const captureFrameAt = (delayMs) =>
+    new Promise((resolve) => setTimeout(() => resolve(captureFrame()), delayMs));
+
   // ── Scan handler ───────────────────────────────────────────────────────────
   const handleScan = async () => {
     if (!stream || scanning || !user) return;
+    
+    // Safety guard: only allow scan if MediaPipe confirms a valid palm
+    if (mpLoaded && !palmReady) {
+      setStatus("Invalid Position");
+      setInstruction("Please show your open PALM clearly to the camera");
+      setGuideColor("var(--accent-red)");
+      setTimeout(() => {
+        setStatus("Ready");
+        setGuideColor("var(--accent-blue)");
+      }, 2000);
+      return;
+    }
 
     setScanning(true);
     setGuideColor("var(--accent-green)");
@@ -188,40 +239,75 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
     animate();
 
     const imageBlob = await captureFrame();
-    let success = false;
     let result = null;
 
     try {
       if (mode === "enroll") {
-        success = await enroll(user.id, imageBlob);
-      } else {
-        result = await verify(user.id, imageBlob);
-        success = result?.accepted;
-      }
+        // ── MULTI-SAMPLE ENROLLMENT ─────────────────────────────────────────
+        result = await enroll(user.id, imageBlob);
+        const newCount = result?.samples ?? (enrollSamplesCount + 1);
+        setEnrollSamplesCount(newCount);
 
-      if (success) {
-        setIsSuccess(true);
-        setStatus("Verified");
-        setInstruction("Identity confirmed");
-        setTimeout(() => {
-          onVerified(imageBlob);
-          onClose();
-        }, 1200);
-      } else {
-        setScanning(false);
-        setScanProgress(0);
-        setGuideColor("var(--accent-red)");
-        setStatus("Verification Failed");
-        setInstruction(
-          result?.similarity
-            ? `Match: ${Math.round(result.similarity * 100)}% — Try again`
-            : "Scan failed. Reposition and try again."
-        );
-        setTimeout(() => {
+        if (newCount >= ENROLL_REQUIRED) {
+          // All required samples collected — done!
+          setIsSuccess(true);
+          setStatus("Enrolled!");
+          setInstruction("Palm template saved successfully");
+          setTimeout(() => {
+            onVerified(imageBlob);
+            onClose();
+          }, 1400);
+        } else {
+          // Need more samples — reset for next capture
+          const remaining = ENROLL_REQUIRED - newCount;
+          setScanning(false);
+          setScanProgress(0);
           setGuideColor("var(--accent-blue)");
-          setStatus("Ready");
-          setInstruction("Open your palm and hold it steady");
-        }, 2500);
+          setStatus(`Sample ${newCount}/${ENROLL_REQUIRED} captured`);
+          setInstruction(
+            remaining === 1
+              ? "Almost there! One more scan"
+              : `Good! ${remaining} more scans needed`
+          );
+        }
+      } else {
+        // ── VERIFICATION — one long scan, multiple hidden frames ───────────
+        // Capture VERIFY_FRAMES frames spread across the scan duration
+        // The progress bar covers the capture window — user just holds still
+        const interval = Math.floor(2000 / (VERIFY_FRAMES - 1));  // e.g. 667ms apart
+        const framePromises = Array.from({ length: VERIFY_FRAMES }, (_, i) =>
+          captureFrameAt(i * interval)
+        );
+        const frames = await Promise.all(framePromises);
+        const validFrames = frames.filter(Boolean);
+
+        result = await verifyMulti(user.id, validFrames);
+        const accepted = result?.accepted;
+
+        if (accepted) {
+          setIsSuccess(true);
+          setStatus("Verified");
+          setInstruction("Identity confirmed");
+          setTimeout(() => {
+            onVerified(imageBlob);
+            onClose();
+          }, 1200);
+        } else {
+          setScanning(false);
+          setScanProgress(0);
+          setGuideColor("var(--accent-red)");
+          setStatus("Verification Failed");
+          setInstruction(
+            result?.similarity
+              ? `Match: ${Math.round(result.similarity * 100)}% — Try again`
+              : "Scan failed. Reposition and try again."
+          );
+          setTimeout(() => {
+            setGuideColor("var(--accent-blue)");
+            setStatus("Ready");
+            setInstruction("Open your palm and hold it steady");
+          }, 2500);
+        }
       }
     } catch (_) {
       setScanning(false);
@@ -258,7 +344,9 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
                   PALM RECOGNITION
                 </div>
                 <div className="text-[9px] font-bold text-text-secondary tracking-[0.2em] uppercase font-heading">
-                  {mode === "enroll" ? "Enrollment" : "Secure Access"}
+                  {mode === "enroll"
+                    ? `Enrollment — Step ${Math.min(enrollSamplesCount + 1, ENROLL_REQUIRED)} of ${ENROLL_REQUIRED}`
+                    : "Secure Access"}
                 </div>
               </div>
             </div>
@@ -350,6 +438,27 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
               </div>
             )}
 
+            {/* Enrollment step dots */}
+            {mode === "enroll" && !isSuccess && (
+              <div className="flex items-center justify-center gap-2 mb-3">
+                {Array.from({ length: ENROLL_REQUIRED }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2.5 h-2.5 rounded-full border-2 transition-all duration-400 ${
+                      i < enrollSamplesCount
+                        ? "bg-accent-green border-accent-green shadow-[0_0_6px_var(--accent-green)]"
+                        : i === enrollSamplesCount
+                        ? "bg-accent-blue/40 border-accent-blue animate-pulse"
+                        : "bg-transparent border-border-main"
+                    }`}
+                  />
+                ))}
+                <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest ml-1">
+                  {enrollSamplesCount}/{ENROLL_REQUIRED} samples
+                </span>
+              </div>
+            )}
+
             <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mb-6 opacity-40 font-heading">
               {isFront ? "FRONT CAMERA" : "REAR CAMERA"}
             </p>
@@ -365,7 +474,9 @@ export default function PalmScanner({ isOpen, onClose, onVerified, mode = "verif
                   : <ShieldCheck className="w-6 h-6 text-white" />
                 }
                 <span className="text-white font-bold italic tracking-tight uppercase font-heading">
-                  {mode === "enroll" ? "Start Scanning" : "Authorize"}
+                  {mode === "enroll"
+                    ? (enrollSamplesCount === 0 ? "Scan Palm" : `Scan ${enrollSamplesCount + 1} of ${ENROLL_REQUIRED}`)
+                    : "Authorize"}
                 </span>
               </button>
             ) : (

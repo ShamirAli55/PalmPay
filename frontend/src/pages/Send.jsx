@@ -11,7 +11,7 @@ const QUICK_AMOUNTS = [200, 500, 1000, 5000];
 export default function Send() {
   const { user } = useUser();
   const navigate = useNavigate();
-  const { balance, sendMoney, loading, users, fetchUsers, linkedBanks } = useWalletStore();
+  const { balance, sendMoney, loading, users, fetchUsers, transactions, linkedBanks } = useWalletStore();
   const [selectedContact, setSelectedContact] = useState(null);
   const [selectedBank, setSelectedBank] = useState(null);
   const [amount, setAmount] = useState("100.00");
@@ -250,33 +250,56 @@ export default function Send() {
                      </div>
                   )}
 
-                  {/* 3. Recent Transactions (Quick List) */}
+                  {/* 3. Recent Transactions (Dynamic List) */}
                   {!foundUser && (
                     <div className="space-y-4 pt-2">
                        <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
                           Recent Recipients
                        </div>
-                       <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar animate-in fade-in duration-500">
-                          {(users || []).filter(u => u.clerkId !== user?.id).slice(0, 8).map((u) => (
-                             <button
-                                key={u.clerkId}
-                                onClick={() => setSelectedContact(u.clerkId)}
-                                className="flex flex-col items-center gap-2 bg-text-primary/5 border border-border-main/40 p-3 rounded-2xl hover:bg-text-primary/10 hover:border-accent-blue/30 transition-all shrink-0 active:scale-95 min-w-[90px]"
-                             >
-                                <div className="w-10 h-10 rounded-full bg-accent-blue/10 flex items-center justify-center text-[12px] font-bold text-accent-blue shrink-0 shadow-inner">
-                                   {getInitials(u.name)}
+                       
+                       {(() => {
+                          // Get unique recipient IDs from debit transactions
+                          const recentIds = [...new Set((transactions || [])
+                            .filter(t => t.type === 'debit' && t.recipientId)
+                            .map(t => t.recipientId))];
+                          
+                          // Match IDs with user objects
+                          const recentUsers = (users || []).filter(u => recentIds.includes(u.clerkId));
+
+                          if (recentUsers.length === 0) {
+                            return (
+                              <div className="py-6 px-4 border-2 border-dashed border-text-primary/5 rounded-2xl text-center bg-text-primary/[0.02] animate-in fade-in duration-700">
+                                <div className="text-[10px] text-text-secondary font-bold uppercase tracking-[0.2em] opacity-30">
+                                  No transaction history found
                                 </div>
-                                <div className="text-center">
-                                   <div className="text-[10px] font-bold text-text-primary uppercase tracking-tight truncate max-w-[80px]">
-                                      {u.name?.split(" ")[0] || "User"}
-                                   </div>
-                                   <div className="text-[8px] font-black text-accent-blue/50 uppercase truncate max-w-[80px] opacity-70">
-                                      @{u.username || 'user'}
-                                   </div>
-                                </div>
-                             </button>
-                          ))}
-                       </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar animate-in slide-in-from-right-4 duration-500">
+                              {recentUsers.slice(0, 8).map((u) => (
+                                <button
+                                    key={u.clerkId}
+                                    onClick={() => setSelectedContact(u.clerkId)}
+                                    className="flex flex-col items-center gap-2 bg-text-primary/5 border border-border-main/40 p-3 rounded-2xl hover:bg-text-primary/10 hover:border-accent-blue/30 transition-all shrink-0 active:scale-95 min-w-[90px] group/item"
+                                >
+                                    <div className="w-10 h-10 rounded-full bg-accent-blue/10 flex items-center justify-center text-[12px] font-bold text-accent-blue shrink-0 shadow-inner group-hover/item:bg-accent-blue group-hover/item:text-white transition-all">
+                                      {getInitials(u.name)}
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-[10px] font-bold text-text-primary uppercase tracking-tight truncate max-w-[80px]">
+                                          {u.name?.split(" ")[0] || "User"}
+                                      </div>
+                                      <div className="text-[8px] font-black text-accent-blue/50 uppercase truncate max-w-[80px] opacity-70">
+                                          @{u.username || 'user'}
+                                      </div>
+                                    </div>
+                                </button>
+                              ))}
+                            </div>
+                          );
+                       })()}
                     </div>
                   )}
 

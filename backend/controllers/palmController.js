@@ -58,3 +58,29 @@ exports.verifyPalm = async (req, res) => {
         res.status(500).json({ error: 'Palm service error' });
     }
 };
+
+// ─── POST /api/palm/verify-multi ─────────────────────────────────────────────
+// Receives N frames (req.files via upload.array) captured in one long scan,
+// forwards them to Python's /verify-multi endpoint which averages the probe
+// embeddings internally before comparing to the stored template.
+exports.verifyPalmMulti = async (req, res) => {
+    try {
+        const { clerkId } = req.body;
+        if (!req.files || req.files.length === 0)
+            return res.status(400).json({ message: 'No frames uploaded' });
+
+        const form = new formData();
+        req.files.forEach((f, i) => {
+            form.append('files', f.buffer, { filename: `frame_${i}.jpg` });
+        });
+
+        const response = await axios.post(`${PALM_AUTH_URL}/verify-multi/${clerkId}`, form, {
+            headers: form.getHeaders(),
+        });
+
+        res.json(response.data);
+    } catch (err) {
+        console.error('Palm Verify-Multi Error:', err.response?.data || err.message);
+        res.status(500).json({ error: 'Palm service error' });
+    }
+};

@@ -28,12 +28,18 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
-    errorElement: <ErrorPage />
+    errorElement: <ErrorPage />,
+    children: [
+      { path: "sso-callback", element: <Login /> } // Captures Clerk SSO callbacks
+    ]
   },
   {
     path: "/signup",
     element: <SignUp />,
-    errorElement: <ErrorPage />
+    errorElement: <ErrorPage />,
+    children: [
+      { path: "sso-callback", element: <SignUp /> }
+    ]
   },
   {
     path: "/",

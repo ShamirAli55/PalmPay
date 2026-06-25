@@ -1,14 +1,11 @@
 {
-    "threshold": 0.82,
+    "threshold": 0.91,
     "embed_dim": 128,
     "img_size": 128,
+    "max_samples": 5,
     "normalize": {
-        "mean": [
-            0.5
-        ],
-        "std": [
-            0.5
-        ]
+        "mean": [0.5],
+        "std": [0.5]
     },
     "eer_percent": 1.52
 }
