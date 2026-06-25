@@ -11,6 +11,10 @@ export default function Topbar() {
   const { user } = useUser();
   const navigate = useNavigate();
   const { isDark, toggleTheme, toggleSidebar, notifications, fetchData } = useWalletStore();
+  
+  const [hidden, setHidden] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
   // Sync notifications on mount
   useEffect(() => {
     if (user?.id) {
@@ -18,10 +22,41 @@ export default function Topbar() {
     }
   }, [user, fetchData]);
 
+  // Scroll logic
+  useEffect(() => {
+    const handleScroll = () => {
+      // Find the scrollable container (parent in AppLayout)
+      const container = document.querySelector('.flex-1.flex-col.overflow-y-auto');
+      if (!container) return;
+
+      const currentScrollY = container.scrollTop;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    const container = document.querySelector('.flex-1.flex-col.overflow-y-auto');
+    container?.addEventListener("scroll", handleScroll);
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <header className="h-[80px] flex items-center justify-between px-6 sm:px-10 bg-bg-main border-b border-border-main relative z-50">
+    <motion.header 
+      variants={{
+        visible: { y: 0 },
+        hidden: { y: "-100%" }
+      }}
+      animate={hidden ? "hidden" : "visible"}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="h-[80px] flex items-center justify-between px-6 sm:px-10 bg-bg-main/80 backdrop-blur-md border-b border-border-main sticky top-0 z-[60] shrink-0"
+    >
       {/* Mobile Menu Button */}
       <button
         onClick={toggleSidebar}
@@ -77,6 +112,6 @@ export default function Topbar() {
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

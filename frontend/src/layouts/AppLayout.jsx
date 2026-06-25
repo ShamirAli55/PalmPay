@@ -18,10 +18,10 @@ export default function AppLayout() {
     <div className="flex h-screen bg-bg-main text-text-primary overflow-hidden transition-colors duration-300">
       <Sidebar />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-y-auto no-scrollbar relative">
         <Topbar />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar">
+        <main className="p-4 md:p-6">
           <Outlet />
         </main>
       </div>
