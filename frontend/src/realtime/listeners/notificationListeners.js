@@ -1,7 +1,6 @@
 import { EVENT_NAMES } from '../eventNames';
 import { useWalletStore } from '../../store/walletStore';
 import { useRealtimeStore } from '../../store/realtimeStore';
-
 import { toast } from 'react-hot-toast';
 
 export function registerNotificationListeners(socket) {
@@ -10,13 +9,16 @@ export function registerNotificationListeners(socket) {
         if (realtime.hasProcessedEvent(event.eventId)) return;
         
         console.log('🔔 New notification:', event.notification.title);
-        
-        // Show beautiful toast
-        toast.success(event.notification.message, {
-            id: `notif-${event.notification._id}`,
-            icon: '🔔',
-            duration: 5000
-        });
+
+        // Only show real-time toast for incoming funds or background events 
+        // to avoid duplicating the 'Transfer Successful' toasts the sender already sees.
+        if (event.notification.title === 'Funds Received') {
+            toast.success(event.notification.message, {
+                id: `notif-${event.notification._id}`,
+                icon: '💰',
+                duration: 6000
+            });
+        }
 
         useWalletStore.getState().applyNotificationNewEvent(event);
         realtime.markEventProcessed(event.eventId);

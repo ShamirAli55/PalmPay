@@ -139,7 +139,7 @@ exports.createTransaction = async (req, res) => {
             const notifSender = await new Notification({
                 userId: clerkId,
                 title: 'Payment Sent',
-                message: `You successfully sent Rs. ${amtNum.toLocaleString()} to ${recipient || recipientUser?.name || 'External Account'}.`,
+                message: `Rs. ${amtNum.toLocaleString()} sent to ${recipient || recipientUser?.name || 'Recipient'}.`,
                 type: 'transaction'
             }).save();
 
@@ -153,7 +153,7 @@ exports.createTransaction = async (req, res) => {
                 const notifReceiver = await new Notification({
                     userId: recipientId,
                     title: 'Funds Received',
-                    message: `You received Rs. ${amtNum.toLocaleString()} from ${senderUser.name || 'User'}.`,
+                    message: `Rs. ${amtNum.toLocaleString()} received from ${senderUser.name || 'User'}.`,
                     type: 'transaction'
                 }).save();
 
@@ -237,7 +237,7 @@ exports.addFunds = async (req, res) => {
             const notif = await new Notification({
                 userId: clerkId,
                 title: 'Funds Added',
-                message: `Rs. ${amtNum.toLocaleString()} successfully added to your wallet from ${source || 'External Source'}.`,
+                message: `Rs. ${amtNum.toLocaleString()} added to wallet from ${source || 'Source'}.`,
                 type: 'transaction'
             }).save();
 
