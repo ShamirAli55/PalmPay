@@ -209,8 +209,8 @@ export default function Settings() {
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-16">
       <div className="mb-6 text-center sm:text-left">
-        <h1 className="text-3xl sm:text-4xl font-bold text-text-primary tracking-tight font-heading">Vault Configuration</h1>
-        <p className="text-[14px] text-text-secondary mt-3 font-medium">Manage your biometric security, interface themes, and profile details.</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-text-primary tracking-tight font-heading">Settings</h1>
+        <p className="text-[14px] text-text-secondary mt-3 font-medium">Manage your personal information, security preferences, and interface theme.</p>
       </div>
 
       <div className="flex gap-8 mb-8 border-b border-white/5 overflow-x-auto no-scrollbar scroll-smooth">
@@ -229,7 +229,7 @@ export default function Settings() {
       {activeTab === "General" ? (
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="xl:col-span-3 space-y-6">
-            <SectionCard title="Public Identity" subtitle="Linked personal data on your network profile">
+            <SectionCard title="Profile Information" subtitle="Update your personal details and contact information">
               <div className="flex flex-col sm:flex-row items-center gap-8 mb-12">
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-2 border-accent-blue/30 p-1 bg-bg-main shadow-lg">
@@ -244,8 +244,8 @@ export default function Settings() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 {[
-                  { label: "Vault Alias", value: clerkUser?.fullName || clerkUser?.username || "", readOnly: true },
-                  { label: "Primary Email", value: clerkUser?.primaryEmailAddress?.emailAddress || "", readOnly: true },
+                  { label: "Full Name", value: clerkUser?.fullName || clerkUser?.username || "", readOnly: true },
+                  { label: "Email Address", value: clerkUser?.primaryEmailAddress?.emailAddress || "", readOnly: true },
                 ].map((f) => (
                   <div key={f.label}>
                     <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] mb-3 font-heading">{f.label}</div>
@@ -259,8 +259,8 @@ export default function Settings() {
                 
                 <div className="sm:col-span-2">
                   <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.15em] mb-3 font-heading flex items-center gap-2">
-                    Vault Phone Number
-                    <span className="text-[9px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md font-black">SEARCHABLE</span>
+                    Mobile Number
+                    <span className="text-[9px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md font-black">Used for transfers</span>
                   </div>
                   <input
                     value={phone}
@@ -268,29 +268,29 @@ export default function Settings() {
                     placeholder="+92 300 1234567"
                     className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
                   />
-                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60">Required for peer-to-peer transfers using your phone number.</p>
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60">Required for receiving payments using your mobile number.</p>
                 </div>
               </div>
             </SectionCard>
           </div>
 
           <div className="xl:col-span-2 space-y-6">
-            <SectionCard title="System Environment" subtitle="Tailor the interface to your preference">
+            <SectionCard title="Preferences" subtitle="Customize the interface and display settings">
               <SettingRow
                 icon={isDark ? Moon : Sun}
                 iconColor="var(--accent-blue)"
-                label="Dark Protocol"
-                sub={isDark ? "Maximum contrast enabled" : "Standard clarity mode"}
+                label="Dark Mode"
+                sub={isDark ? "Enable high-contrast dark theme" : "Use light theme interface"}
                 right={<Toggle on={isDark} onChange={toggleTheme} />}
               />
             </SectionCard>
 
             <button onClick={handleSave} className={`w-full py-5 rounded-xl font-bold text-sm tracking-widest text-white transition-all shadow-2xl font-heading uppercase ${saved ? 'bg-accent-green' : 'bg-accent-blue shadow-accent-blue/20 hover:brightness-110 active:scale-[0.98]'}`}>
-              {saved ? 'Synchronized ✓' : 'Save Protocol Changes'}
+              {saved ? 'Saved ✓' : 'Save Changes'}
             </button>
 
             <button className="w-full py-4 border border-accent-red/20 text-accent-red rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-accent-red/5 transition-all flex items-center justify-center gap-2">
-              <LogOut size={14} /> Exit Vault
+              <LogOut size={14} /> Logout
             </button>
           </div>
         </div>
