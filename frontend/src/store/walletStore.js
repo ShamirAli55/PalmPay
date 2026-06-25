@@ -133,6 +133,18 @@ export const useWalletStore = create((set, get) => ({
     }
   },
 
+  deleteNotification: async (id) => {
+    try {
+      await api.delete(`/notifications/${id}`);
+      set((state) => ({
+        notifications: state.notifications.filter(n => n._id !== id)
+      }));
+      toast.success('Alert removed', { id: 'delete-notif' });
+    } catch (err) {
+      toast.error('Failed to remove alert');
+    }
+  },
+
   setActiveCard: (id) => set({ activeCardId: id }),
 
   // Analytics

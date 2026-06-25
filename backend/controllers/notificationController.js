@@ -58,6 +58,23 @@ exports.markAllAsRead = async (req, res) => {
     }
 };
 
+// DELETE /api/notifications/:id
+exports.deleteNotification = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const notif = await Notification.findByIdAndDelete(id);
+        
+        if (notif && !notif.isRead) {
+            const unreadCount = await getUnreadCount(notif.userId);
+            emitUnreadCountUpdated({ clerkId: notif.userId, unreadCount });
+        }
+
+        res.json({ message: 'Notification deleted', id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // POST /api/notifications (internal/internal use)
 exports.createInternalNotification = async (userId, title, message, type) => {
     try {
