@@ -74,8 +74,8 @@ function SecurityTab() {
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-6">
           {/* Icon */}
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border ${palmEnrolled
-              ? 'bg-accent-green/10 border-accent-green/20'
-              : 'bg-accent-red/10 border-accent-red/20'
+            ? 'bg-accent-green/10 border-accent-green/20'
+            : 'bg-accent-red/10 border-accent-red/20'
             }`}>
             {palmEnrolled
               ? <ShieldCheck className="w-7 h-7 text-accent-green" />
@@ -89,8 +89,8 @@ function SecurityTab() {
                 {palmEnrolled ? 'Biometric Security Active' : 'Biometric Security Inactive'}
               </h2>
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${palmEnrolled
-                  ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
-                  : 'bg-accent-red/10 text-accent-red/80 border-accent-red/20'
+                ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
+                : 'bg-accent-red/10 text-accent-red/80 border-accent-red/20'
                 }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${palmEnrolled ? 'bg-accent-green' : 'bg-accent-red/70'
                   }`} />
@@ -124,8 +124,8 @@ function SecurityTab() {
             <div key={label} className="px-5 py-4">
               <div className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mb-1">{label}</div>
               <div className={`text-[13px] font-bold font-heading ${value === 'Active' || value === 'Full' ? 'text-accent-green' :
-                  value === 'Inactive' || value === 'None' ? 'text-accent-red/70' :
-                    'text-text-primary'
+                value === 'Inactive' || value === 'None' ? 'text-accent-red/70' :
+                  'text-text-primary'
                 }`}>{value}</div>
             </div>
           ))}
@@ -141,8 +141,8 @@ function SecurityTab() {
               sub={palmEnrolled ? "Active — Palm ID verified" : "Not enrolled"}
               right={
                 <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border ${palmEnrolled
-                    ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
-                    : 'bg-accent-red/10 text-accent-red/70 border-accent-red/20'
+                  ? 'bg-accent-green/10 text-accent-green border-accent-green/20'
+                  : 'bg-accent-red/10 text-accent-red/70 border-accent-red/20'
                   }`}>
                   {palmEnrolled ? 'Enrolled' : 'Not Set'}
                 </span>
@@ -180,12 +180,11 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
 
   useEffect(() => {
     if (clerkUser?.id) {
-      fetchData(clerkUser.id).then(() => {
-         // Optionally set internal state from dbUser if needed
-      });
+      fetchData(clerkUser.id);
       fetchPalmStatus(clerkUser.id);
     }
   }, [clerkUser?.id]);
@@ -193,20 +192,34 @@ export default function Settings() {
   useEffect(() => {
     if (dbUser?.phone) setPhone(dbUser.phone);
     if (dbUser?.username) setUsername(dbUser.username);
-  }, [dbUser]);
+    if (dbUser?.name) setName(dbUser.name);
+    else if (clerkUser?.fullName) setName(clerkUser.fullName);
+  }, [dbUser, clerkUser]);
 
   const activeTab = searchParams.get("tab") === "security" ? "Security" : "General";
   const setTab = (tab) => setSearchParams(tab === "Security" ? { tab: "security" } : {});
 
   const handleSave = async () => {
     if (clerkUser?.id) {
-      const success = await updateProfile(clerkUser.id, { phone, username });
+      // Normalize phone: strip spaces and dashes, allow + if first char
+      const normalizedPhone = phone.replace(/[\s-]/g, '');
+      const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const success = await updateProfile(clerkUser.id, {
+        phone: normalizedPhone,
+        username: normalizedUsername,
+        name: name.trim()
+      });
       if (success) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+        window.location.reload();
       }
     }
   };
+
+  const hasChanges = 
+    name.trim() !== (dbUser?.name || clerkUser?.fullName || "") ||
+    phone.replace(/[\s-]/g, '') !== (dbUser?.phone || "") ||
+    username.toLowerCase().replace(/[^a-z0-9]/g, '') !== (dbUser?.username || "");
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-16">
@@ -239,26 +252,32 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="text-center sm:text-left">
-                  <div className="text-2xl font-bold text-text-primary font-heading tracking-tight">{clerkUser?.fullName || clerkUser?.username}</div>
+                  <div className="text-2xl font-bold text-text-primary font-heading tracking-tight">{name || "Palm User"}</div>
                   <div className="text-[13px] text-text-secondary mt-1.5 font-medium">{clerkUser?.primaryEmailAddress?.emailAddress}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                {[
-                  { label: "Full Name", value: clerkUser?.fullName || clerkUser?.username || "", readOnly: true },
-                  { label: "Email Address", value: clerkUser?.primaryEmailAddress?.emailAddress || "", readOnly: true },
-                ].map((f) => (
-                  <div key={f.label}>
-                    <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] mb-3 font-heading">{f.label}</div>
-                    <input
-                      defaultValue={f.value}
-                      readOnly={f.readOnly}
-                      className={`w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner ${f.readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    />
-                  </div>
-                ))}
-                
+                <div>
+                  <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] mb-3 font-heading">Full Name</div>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                  />
+                  <p className="text-[9px] text-text-secondary mt-2 opacity-50 italic">How your name appears to others in transfers.</p>
+                </div>
+
+                <div>
+                  <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] mb-3 font-heading">Email Address</div>
+                  <input
+                    value={clerkUser?.primaryEmailAddress?.emailAddress || ""}
+                    readOnly
+                    className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none opacity-40 cursor-not-allowed shadow-inner"
+                  />
+                  <p className="text-[9px] text-text-secondary mt-2 opacity-50 italic">Managed via Auth Provider.</p>
+                </div>
+
                 <div className="sm:col-span-2">
                   <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.15em] mb-3 font-heading flex items-center gap-2">
                     Palm ID
@@ -267,13 +286,13 @@ export default function Settings() {
                   <div className="relative">
                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary font-bold font-heading">@</span>
                     <input
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                        placeholder="yourname"
-                        className="w-full bg-text-primary/5 border border-border-main rounded-xl pl-10 pr-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="yourname"
+                      className="w-full bg-text-primary/5 border border-border-main rounded-xl pl-10 pr-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
                     />
                   </div>
-                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60 italic">Your unique handle for instant transfers. This cannot be claimed by others.</p>
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60 italic">Your unique handle for instant transfers. No spaces or special characters.</p>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -287,7 +306,7 @@ export default function Settings() {
                     placeholder="+92 300 1234567"
                     className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
                   />
-                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60">Required for receiving payments using your mobile number.</p>
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60">Number will be normalized (spaces and dashes removed) for security.</p>
                 </div>
               </div>
             </SectionCard>
@@ -304,7 +323,11 @@ export default function Settings() {
               />
             </SectionCard>
 
-            <button onClick={handleSave} className={`w-full py-5 rounded-xl font-bold text-sm tracking-widest text-white transition-all shadow-2xl font-heading uppercase ${saved ? 'bg-accent-green' : 'bg-accent-blue shadow-accent-blue/20 hover:brightness-110 active:scale-[0.98]'}`}>
+            <button 
+              onClick={handleSave} 
+              disabled={!hasChanges && !saved}
+              className={`w-full py-5 rounded-xl font-bold text-sm tracking-widest text-white transition-all shadow-2xl font-heading uppercase ${!hasChanges && !saved ? 'opacity-40 cursor-not-allowed grayscale bg-text-primary/10' : saved ? 'bg-accent-green' : 'bg-accent-blue shadow-accent-blue/20 hover:brightness-110 active:scale-[0.98]'}`}
+            >
               {saved ? 'Saved ✓' : 'Save Changes'}
             </button>
 

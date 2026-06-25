@@ -137,11 +137,14 @@ exports.listUsers = async (req, res) => {
 // ─── POST /api/users/update ──────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
     try {
-        const { clerkId, phone, username } = req.body;
+        const { clerkId, phone, username, name } = req.body;
         
         // Find user
         const user = await User.findOne({ clerkId });
         if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Update Name
+        if (name) user.name = name;
 
         // Update Phone
         if (phone) {
