@@ -150,6 +150,12 @@ export default function Receive() {
                                 <div className="text-[13px] font-bold text-accent-blue font-heading tracking-widest truncate">
                                     {PALM_TAG}
                                 </div>
+                                {dbUser?.phone && (
+                                    <div className="text-[10px] text-text-secondary mt-1 font-bold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
+                                        <div className="w-1 h-1 rounded-full bg-text-secondary" />
+                                        {dbUser.phone}
+                                    </div>
+                                )}
                             </div>
                             <button
                                 onClick={handleCopy}

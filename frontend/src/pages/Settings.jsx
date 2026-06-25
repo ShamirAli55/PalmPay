@@ -179,6 +179,7 @@ export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [saved, setSaved] = useState(false);
   const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     if (clerkUser?.id) {
@@ -191,6 +192,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (dbUser?.phone) setPhone(dbUser.phone);
+    if (dbUser?.username) setUsername(dbUser.username);
   }, [dbUser]);
 
   const activeTab = searchParams.get("tab") === "security" ? "Security" : "General";
@@ -198,7 +200,7 @@ export default function Settings() {
 
   const handleSave = async () => {
     if (clerkUser?.id) {
-      const success = await updateProfile(clerkUser.id, { phone });
+      const success = await updateProfile(clerkUser.id, { phone, username });
       if (success) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
@@ -257,6 +259,23 @@ export default function Settings() {
                   </div>
                 ))}
                 
+                <div className="sm:col-span-2">
+                  <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.15em] mb-3 font-heading flex items-center gap-2">
+                    Palm ID
+                    <span className="text-[9px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md font-black">Unique Handle</span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary font-bold font-heading">@</span>
+                    <input
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                        placeholder="yourname"
+                        className="w-full bg-text-primary/5 border border-border-main rounded-xl pl-10 pr-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                    />
+                  </div>
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60 italic">Your unique handle for instant transfers. This cannot be claimed by others.</p>
+                </div>
+
                 <div className="sm:col-span-2">
                   <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.15em] mb-3 font-heading flex items-center gap-2">
                     Mobile Number

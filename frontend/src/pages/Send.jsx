@@ -36,6 +36,8 @@ export default function Send() {
     }
   };
 
+  const normalizePhone = (p) => p ? p.replace(/\D/g, '') : '';
+
   useEffect(() => {
     if ((users || []).length > 0 && !selectedContact && !success) {
       const firstOther = (users || []).find(u => u.clerkId !== user?.id);
@@ -168,11 +170,15 @@ export default function Send() {
                   </div>
                   <input
                     type="text"
-                    placeholder="Phone number or Wallet ID"
+                    placeholder="Phone, @PalmTag or Name"
                     onChange={(e) => {
-                      const val = e.target.value;
+                      const val = e.target.value.toLowerCase().replace('@', '');
+                      const normalizedInput = normalizePhone(val);
                       const found = (users || []).find(
-                        u => u.phone === val || u.clerkId === val || u.name?.toLowerCase().includes(val.toLowerCase())
+                        u => (u.phone && normalizePhone(u.phone) === normalizedInput) || 
+                             u.clerkId === val || 
+                             u.name?.toLowerCase().includes(val) || 
+                             (u.username && u.username.toLowerCase().includes(val))
                       );
                       if (found) setSelectedContact(found.clerkId);
                     }}
@@ -184,25 +190,31 @@ export default function Send() {
                 <div>
                   {/* Selection Display */}
                   {selectedContact && !selectedBank ? (
-                    <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-xl p-4 flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
-                      <div className="w-11 h-11 rounded-full bg-accent-blue/20 flex items-center justify-center text-[14px] font-bold text-accent-blue shrink-0">
-                        {getInitials(users.find(u => u.clerkId === selectedContact)?.name)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[14px] font-bold text-text-primary truncate">
-                          {users.find(u => u.clerkId === selectedContact)?.name || "Palm User"}
+                    (() => {
+                      const u = users.find(user => user.clerkId === selectedContact);
+                      const tag = u?.username ? `@${u.username}` : `@${u?.name?.split(' ')[0].toLowerCase() || 'user'}`;
+                      return (
+                        <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-xl p-4 flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
+                          <div className="w-11 h-11 rounded-full bg-accent-blue/20 flex items-center justify-center text-[14px] font-bold text-accent-blue shrink-0">
+                            {getInitials(u?.name)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[14px] font-bold text-text-primary truncate">
+                              {u?.name || "Palm User"}
+                            </div>
+                            <div className="text-[10px] text-accent-blue font-bold uppercase tracking-widest opacity-80 truncate">
+                              {tag}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setSelectedContact(null)}
+                            className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1"
+                          >
+                            Change
+                          </button>
                         </div>
-                        <div className="text-[10px] text-text-secondary font-medium uppercase tracking-widest opacity-60 truncate">
-                          {users.find(u => u.clerkId === selectedContact)?.phone || "NO PHONE LINKED"}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSelectedContact(null)}
-                        className="text-[10px] font-bold text-text-secondary hover:text-accent-red uppercase tracking-tight transition-colors shrink-0 px-2 py-1"
-                      >
-                        Change
-                      </button>
-                    </div>
+                      );
+                    })()
                   ) : selectedBank ? (
                     <div className="bg-accent-green/5 border border-accent-green/20 rounded-xl p-4 flex items-center gap-4 relative overflow-hidden animate-in slide-in-from-top-2 duration-300">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-accent-green/5 rounded-full blur-2xl -mr-12 -mt-12" />
@@ -228,20 +240,28 @@ export default function Send() {
                     </div>
                   ) : (
                     <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar animate-in fade-in duration-300">
-                      {(users || []).filter(u => u.clerkId !== user?.id).slice(0, 6).map((u) => (
-                        <button
-                          key={u.clerkId}
-                          onClick={() => setSelectedContact(u.clerkId)}
-                          className="flex items-center gap-2 bg-text-primary/5 border border-border-main/50 pr-4 py-2 pl-2 rounded-xl hover:bg-text-primary/10 hover:border-accent-blue/20 transition-all shrink-0 active:scale-95"
-                        >
-                          <div className="w-7 h-7 rounded-full bg-accent-blue/20 flex items-center justify-center text-[10px] font-bold text-accent-blue shrink-0">
-                            {getInitials(u.name)}
-                          </div>
-                          <span className="text-[11px] font-bold text-text-primary uppercase tracking-tight whitespace-nowrap">
-                            {u.name?.split(" ")[0] || "User"}
-                          </span>
-                        </button>
-                      ))}
+                      {(users || []).filter(u => u.clerkId !== user?.id).slice(0, 8).map((u) => {
+                        const tag = u?.username ? `@${u.username}` : `@${u?.name?.split(' ')[0].toLowerCase() || 'user'}`;
+                        return (
+                          <button
+                            key={u.clerkId}
+                            onClick={() => setSelectedContact(u.clerkId)}
+                            className="flex flex-col items-center gap-2 bg-text-primary/5 border border-border-main/50 p-3 rounded-xl hover:bg-text-primary/10 hover:border-accent-blue/20 transition-all shrink-0 active:scale-95 min-w-[85px]"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-accent-blue/20 flex items-center justify-center text-[11px] font-bold text-accent-blue shrink-0">
+                              {getInitials(u.name)}
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[10px] font-bold text-text-primary uppercase tracking-tight truncate max-w-[70px]">
+                                {u.name?.split(" ")[0] || "User"}
+                              </div>
+                              <div className="text-[8px] font-bold text-accent-blue/60 uppercase truncate max-w-[70px]">
+                                {tag}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
 

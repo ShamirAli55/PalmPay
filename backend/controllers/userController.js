@@ -3,9 +3,27 @@ const Wallet = require('../models/Wallet');
 const BankAccount = require('../models/BankAccount');
 const Card = require('../models/Card');
 
+// ─── Utility: Generate a unique Palm ID (username) ───────────────────────────
+async function generateUniqueUsername(baseName = 'palm') {
+    let base = baseName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+    if (!base || base.length < 3) base = 'palm' + Math.floor(Math.random() * 1000);
+    
+    let username = base;
+    let exists = await User.findOne({ username });
+    let attempts = 0;
+    
+    while (exists && attempts < 10) {
+        username = `${base}${Math.floor(Math.random() * 9999)}`;
+        exists = await User.findOne({ username });
+        attempts++;
+    }
+    return username;
+}
+
 // ─── Utility: Provision a brand-new user with all default assets ─────────────
 async function provisionNewUser(clerkId, userData = {}) {
-    const user = new User({ clerkId, ...userData });
+    const username = await generateUniqueUsername(userData.name || 'user');
+    const user = new User({ clerkId, username, ...userData });
     await user.save();
 
     const wallet = new Wallet({ userId: clerkId, balance: 25000.0 });
@@ -52,10 +70,18 @@ exports.getUser = async (req, res) => {
 
         let user = await User.findOne({ clerkId });
         
-        // Always sync basic profile info from Clerk if provided in query
-        if (user && req.query.name && req.query.name !== 'undefined') {
-            user.name = req.query.name;
-            await user.save();
+        // Sync profile and ensure username exists
+        if (user) {
+            let changed = false;
+            if (req.query.name && req.query.name !== 'undefined' && user.name !== req.query.name) {
+                user.name = req.query.name;
+                changed = true;
+            }
+            if (!user.username) {
+                user.username = await generateUniqueUsername(user.name || 'user');
+                changed = true;
+            }
+            if (changed) await user.save();
         }
 
         if (!user) user = await provisionNewUser(clerkId, { name: req.query.name || 'Palm User' });
@@ -102,7 +128,7 @@ exports.getUser = async (req, res) => {
 // ─── GET /api/users ──────────────────────────────────────────────────────────
 exports.listUsers = async (req, res) => {
     try {
-        const users = await User.find({}, 'name clerkId phone');
+        const users = await User.find({}, 'name clerkId phone username');
         res.json(users);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -111,18 +137,27 @@ exports.listUsers = async (req, res) => {
 // ─── POST /api/users/update ──────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
     try {
-        const { clerkId, phone } = req.body;
+        const { clerkId, phone, username } = req.body;
         
         // Find user
         const user = await User.findOne({ clerkId });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Update fields
+        // Update Phone
         if (phone) {
-            // Check if phone already taken by another user
             const existing = await User.findOne({ phone, clerkId: { $ne: clerkId } });
             if (existing) return res.status(400).json({ error: 'Phone number already linked to another account' });
             user.phone = phone;
+        }
+
+        // Update Username (Palm ID)
+        if (username) {
+            const cleanUsername = username.replace('@', '').toLowerCase().trim();
+            if (cleanUsername.length < 3) return res.status(400).json({ error: 'Palm ID must be at least 3 characters' });
+            
+            const existing = await User.findOne({ username: cleanUsername, clerkId: { $ne: clerkId } });
+            if (existing) return res.status(400).json({ error: 'Palm ID is already taken' });
+            user.username = cleanUsername;
         }
 
         await user.save();
@@ -132,8 +167,8 @@ exports.updateProfile = async (req, res) => {
             const Notification = require('../models/Notification');
             await new Notification({
                 userId: clerkId,
-                title: 'Profile Updated',
-                message: 'Your profile information has been successfully updated.',
+                title: 'Identity Updated',
+                message: `Your Palm ID was successfully updated to @${user.username || 'unassigned'}.`,
                 type: 'system'
             }).save();
         } catch (nErr) {
