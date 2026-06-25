@@ -18,21 +18,26 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Receive() {
-  const { user } = useUser();
+  const { user: clerkUser } = useUser();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
-  const { transactions, fetchData, loading } = useWalletStore();
+  const { transactions, fetchData, loading, user: dbUser } = useWalletStore();
 
-  const WALLET_ID = user?.id || "PALM-SYNC-PENDING";
+  // Use DB user data for identity, fallback to Clerk metadata
+  const WALLET_ID = clerkUser?.id || "PALM-SYNC-PENDING";
+  const displayName = dbUser?.name || clerkUser?.fullName || "User";
+  const PALM_TAG = dbUser?.username ? `@${dbUser.username}` : (clerkUser?.username ? `@${clerkUser.username}` : `@${(clerkUser?.firstName || 'user').toLowerCase()}${(clerkUser?.lastName || '').toLowerCase()}`);
   const QR_VALUE = WALLET_ID;
 
   // Real-time inbound transactions (filter for credits)
   const inboundHistory = transactions.filter(t => t.type === 'credit').slice(0, 5);
 
   useEffect(() => {
-    if (user?.id) fetchData(user.id);
-  }, [user, fetchData]);
+    if (clerkUser?.id) {
+       fetchData(clerkUser.id, clerkUser.fullName || clerkUser.username);
+    }
+  }, [clerkUser, fetchData]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(WALLET_ID).catch(() => { });
@@ -47,7 +52,7 @@ export default function Receive() {
     
     const shareData = {
       title: 'PalmPay Payment Request',
-      text: `Send money to my PalmPay wallet ID: ${WALLET_ID}`,
+      text: `Send money to my Palm ID (${PALM_TAG}): ${WALLET_ID}`,
       url: window.location.origin + `/send?recipient=${WALLET_ID}`,
     };
 
@@ -94,110 +99,113 @@ export default function Receive() {
           
           <div className="mb-10 text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Receive Money</h1>
-            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Scan barcode to receive funds</p>
+            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Scan QR to pay {clerkUser?.firstName || 'User'}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 lg:gap-14 items-start mb-12">
             {/* QR Code Section - Larger for high scanability */}
-            <div className="md:col-span-2 flex flex-col items-center gap-6">
-                <div className="relative w-full max-w-[320px] mx-auto">
-                    <div 
-                      onClick={() => setIsZoomed(true)}
-                      className="aspect-square p-8 bg-white rounded-[2.5rem] border-8 border-accent-blue/5 relative group cursor-zoom-in shadow-2xl shadow-accent-blue/10 transition-transform hover:scale-[1.02] duration-500"
-                    >
-                        <div className="absolute inset-0 bg-accent-blue/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]" />
-                        <div className="relative z-10 w-full h-full flex items-center justify-center">
-                            <QRCodeSVG 
-                                value={QR_VALUE} 
-                                size={220}
-                                style={{ width: '100%', height: '100%' }}
-                                level="H"
-                                includeMargin={false}
-                                imageSettings={{
-                                    src: "https://raw.githubusercontent.com/lucide-react/lucide/main/icons/hand.svg",
-                                    x: undefined,
-                                    y: undefined,
-                                    height: 40,
-                                    width: 40,
-                                    excavate: true,
-                                }}
-                            />
-                        </div>
-                    </div>
-                    
-                    {/* Floating Zoom Button */}
-                    <button 
-                      onClick={() => setIsZoomed(true)}
-                      className="absolute -top-3 -right-3 w-10 h-10 bg-bg-card border border-border-main rounded-xl shadow-lg flex items-center justify-center text-accent-blue hover:text-text-primary hover:bg-accent-blue transition-all active:scale-90 z-20 group"
-                    >
-                        <Maximize2 size={18} className="group-hover:scale-110 transition-transform" />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-2 text-accent-blue px-4 py-2 bg-accent-blue/5 rounded-full">
-                    <Shield size={12} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Secure Signature</span>
-                </div>
-            </div>
-
-            {/* ID Section - 3/5 columns on desktop */}
-            <div className="md:col-span-3 w-full flex flex-col gap-6 justify-center">
-                <div className="bg-text-primary/5 border border-border-main rounded-2xl p-6 relative group overflow-hidden hover:border-accent-blue/30 transition-all">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-text-secondary tracking-[0.25em] mb-2 font-bold uppercase font-heading">Public Wallet ID</div>
-                            <div className="text-[14px] font-bold text-text-primary tracking-widest font-mono truncate lg:whitespace-normal break-all">
-                                {WALLET_ID}
+                <div className="md:col-span-2 flex flex-col items-center gap-6">
+                    <div className="relative w-full max-w-[320px] mx-auto">
+                        <div 
+                          onClick={() => setIsZoomed(true)}
+                          className="aspect-square p-8 bg-white rounded-[2.5rem] border-8 border-accent-blue/5 relative group cursor-zoom-in shadow-2xl shadow-accent-blue/10 transition-transform hover:scale-[1.02] duration-500"
+                        >
+                            <div className="absolute inset-0 bg-accent-blue/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]" />
+                            <div className="relative z-10 w-full h-full flex items-center justify-center">
+                                <QRCodeSVG 
+                                    value={QR_VALUE} 
+                                    size={220}
+                                    style={{ width: '100%', height: '100%' }}
+                                    level="H"
+                                    includeMargin={false}
+                                    imageSettings={{
+                                        src: "https://raw.githubusercontent.com/lucide-react/lucide/main/icons/hand.svg",
+                                        x: undefined,
+                                        y: undefined,
+                                        height: 40,
+                                        width: 40,
+                                        excavate: true,
+                                    }}
+                                />
                             </div>
                         </div>
-                        <button
-                            onClick={handleCopy}
-                            className={`shrink-0 flex items-center justify-center p-4 rounded-xl border transition-all z-10 ${copied ? "bg-accent-green/10 border-accent-green/30 text-accent-green shadow-xl shadow-accent-green/10" : "bg-bg-card border-border-main text-text-secondary hover:text-text-primary shadow-sm active:scale-95"}`}
+                        
+                        {/* Floating Zoom Button */}
+                        <button 
+                          onClick={() => setIsZoomed(true)}
+                          className="absolute -top-3 -right-3 w-10 h-10 bg-bg-card border border-border-main rounded-xl shadow-lg flex items-center justify-center text-accent-blue hover:text-text-primary hover:bg-accent-blue transition-all active:scale-90 z-20 group"
                         >
-                            {copied ? <CheckCircle2 size={20} /> : <div className="flex items-center gap-2"><Copy size={18} /><span className="text-[11px] font-bold sm:hidden">COPY</span></div>}
+                            <Maximize2 size={18} className="group-hover:scale-110 transition-transform" />
                         </button>
                     </div>
                 </div>
-            </div>
-          </div>
 
-          <div className="pt-10 border-t border-text-primary/5">
-            <div className="flex justify-between items-end mb-6 px-1">
-              <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Recent Deposits</div>
-              <History className="text-text-secondary/30" size={14} />
-            </div>
-            
-            <div className="space-y-3">
-              {loading ? (
-                <div className="flex items-center justify-center py-10 text-text-secondary opacity-40 italic text-[11px] uppercase tracking-widest gap-2">
-                  <Loader2 className="animate-spin" size={14} /> Loading transaction history...
+                {/* ID Section - 3/5 columns on desktop */}
+                <div className="md:col-span-3 w-full flex flex-col gap-6 justify-center">
+                    <div className="bg-text-primary/5 border border-border-main rounded-2xl p-6 relative group overflow-hidden hover:border-accent-blue/30 transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[10px] text-text-secondary tracking-[0.25em] mb-2 font-bold uppercase font-heading">Palm ID</div>
+                                <div className="text-xl sm:text-2xl font-black text-text-primary mb-1 uppercase tracking-tight truncate">{displayName}</div>
+                                <div className="text-[13px] font-bold text-accent-blue font-heading tracking-widest truncate">
+                                    {PALM_TAG}
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleCopy}
+                                className={`shrink-0 flex items-center justify-center p-3.5 sm:p-4 rounded-xl border transition-all z-10 ${copied ? "bg-accent-green/10 border-accent-green/30 text-accent-green shadow-xl shadow-accent-green/10" : "bg-bg-card border-border-main text-text-secondary hover:text-text-primary shadow-sm active:scale-95"}`}
+                            >
+                                {copied ? <CheckCircle2 size={20} /> : <div className="flex items-center gap-2"><Copy size={18} /><span className="text-[11px] font-bold sm:hidden">COPY</span></div>}
+                            </button>
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-text-primary/5">
+                            <div className="text-[9px] text-text-secondary font-bold uppercase tracking-widest mb-2 opacity-50">Technical Address</div>
+                            <div className="text-[11px] sm:text-[12px] font-mono text-text-secondary/70 truncate tracking-wider">
+                                {WALLET_ID}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              ) : inboundHistory.length > 0 ? (
-                inboundHistory.map((req) => (
-                  <div key={req._id} className="bg-text-primary/5 rounded-xl p-4 flex items-center justify-between border border-transparent hover:border-border-main transition-all group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-accent-green/10 flex items-center justify-center text-accent-green font-bold text-xs uppercase">
-                        {req.sender ? req.sender[0] : 'U'}
-                      </div>
-                      <div>
-                        <div className="text-[12px] font-bold text-text-primary uppercase tracking-tight font-heading group-hover:text-accent-blue transition-colors">
-                          {req.sender || 'Unknown Sender'}
-                        </div>
-                        <div className="text-[9px] text-text-secondary font-bold uppercase tracking-widest mt-0.5 opacity-60">
-                          {new Date(req.date).toLocaleDateString()}
-                        </div>
-                      </div>
+            </div>
+
+            <div className="pt-10 border-t border-text-primary/5">
+                <div className="flex justify-between items-end mb-6 px-1">
+                    <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">Recent Deposits</div>
+                    <History className="text-text-secondary/30" size={14} />
+                </div>
+                
+                <div className="space-y-3">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-10 text-text-secondary opacity-40 italic text-[11px] uppercase tracking-widest gap-2">
+                      <Loader2 className="animate-spin" size={14} /> Loading...
                     </div>
-                    <div className="text-right">
-                      <div className="text-[15px] font-black text-accent-green font-heading tracking-tighter leading-none">
-                        +Rs. {Math.abs(req.amount).toLocaleString()}
+                  ) : inboundHistory.length > 0 ? (
+                    inboundHistory.map((req) => (
+                      <div key={req._id} className="bg-text-primary/5 rounded-xl p-3 sm:p-4 flex items-center justify-between border border-transparent hover:border-border-main transition-all group gap-3">
+                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent-green/10 flex items-center justify-center text-accent-green font-bold text-xs uppercase shrink-0">
+                            {req.sender ? req.sender[0] : 'U'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[11px] sm:text-[12px] font-bold text-text-primary uppercase tracking-tight font-heading group-hover:text-accent-blue transition-colors truncate">
+                              {req.sender || 'Unknown Sender'}
+                            </div>
+                            <div className="text-[9px] text-text-secondary font-bold uppercase tracking-widest mt-0.5 opacity-60 truncate">
+                              {new Date(req.date).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-[14px] sm:text-[15px] font-black text-accent-green font-heading tracking-tighter leading-none">
+                            +Rs. {Math.abs(req.amount).toLocaleString()}
+                          </div>
+                          <div className="inline-flex items-center justify-center text-[7px] sm:text-[8px] font-black text-accent-green bg-accent-green/20 px-1.5 sm:px-2 py-0.5 rounded-lg mt-1 sm:mt-1.5 italic uppercase tracking-wider">
+                            CREDITED
+                          </div>
+                        </div>
                       </div>
-                      <div className="inline-flex items-center justify-center text-[8px] font-black text-accent-green bg-accent-green/20 px-2 py-0.5 rounded-lg mt-1.5 italic uppercase tracking-wider">
-                        CREDITED
-                      </div>
-                    </div>
-                  </div>
-                ))
+                    ))
               ) : (
                 <div className="text-center py-12 bg-text-primary/2 rounded-2xl border border-dashed border-border-main">
                   <p className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] opacity-40 italic">No incoming payments yet</p>

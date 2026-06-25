@@ -158,17 +158,42 @@ export const useWalletStore = create((set, get) => ({
   getChartData: () => {
     const { transactions } = get();
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const currentDay = new Date().getDay();
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    
+    // Week data (last 7 days)
     const week = days.map((day, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - ((currentDay - i + 7) % 7));
       const daySpend = Math.abs(transactions.filter(t => {
         const tDate = new Date(t.date);
         return tDate.getDay() === i && t.type === 'debit';
       }).reduce((acc, t) => acc + t.amount, 0));
       return { day, amount: daySpend };
     });
-    return { week, month: [], year: [] };
+
+    // Month data (grouped by 4 weeks)
+    const month = [1, 2, 3, 4].map(w => {
+      const weekSpend = Math.abs(transactions.filter(t => {
+        const tDate = new Date(t.date);
+        const tMonth = tDate.getMonth();
+        const tYear = tDate.getFullYear();
+        const now = new Date();
+        const tWeek = Math.ceil(tDate.getDate() / 7);
+        return tMonth === now.getMonth() && tYear === now.getFullYear() && tWeek === w && t.type === 'debit';
+      }).reduce((acc, t) => acc + t.amount, 0));
+      return { day: `WK ${w}`, amount: weekSpend };
+    });
+
+    // Year data (grouped by 12 months)
+    const year = months.map((m, i) => {
+      const monthSpend = Math.abs(transactions.filter(t => {
+        const tDate = new Date(t.date);
+        const tYear = tDate.getFullYear();
+        const now = new Date();
+        return tYear === now.getFullYear() && tDate.getMonth() === i && t.type === 'debit';
+      }).reduce((acc, t) => acc + t.amount, 0));
+      return { day: m, amount: monthSpend };
+    });
+
+    return { week, month, year };
   },
 
   getAnalyticsData: () => {

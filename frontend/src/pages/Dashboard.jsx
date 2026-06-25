@@ -195,71 +195,81 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="h-[280px] w-full mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData[chartRange]}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                barCategoryGap="10%"
-              >
-                <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity={1} />
-                    <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity={0.4} />
-                  </linearGradient>
-                  <linearGradient id="inactiveGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--text-primary)" stopOpacity={0.1} />
-                    <stop offset="100%" stopColor="var(--text-primary)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--text-primary)" opacity={0.05} />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--text-secondary)", fontSize: 11, fontWeight: 700 }}
-                  dy={15}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--text-secondary)", fontSize: 10, fontWeight: 600 }}
-                  tickFormatter={(v) => v >= 1000 ? `${v / 1000}k` : v}
-                />
-                <Tooltip
-                  cursor={{ fill: "var(--text-primary)", opacity: 0.03, radius: 4 }}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-bg-card/90 backdrop-blur-xl border border-border-main p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                          <p className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-2">{label}</p>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-accent-blue" />
-                            <p className="text-lg font-bold text-text-primary font-heading tracking-tight">
-                              Rs. {payload[0].value.toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar
-                  dataKey="amount"
-                  radius={[2, 2, 0, 0]}
-                  animationDuration={1500}
+          <div className="h-[280px] w-full mt-2 relative">
+            {chartData[chartRange].every(d => d.amount === 0) ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-text-secondary/30 gap-4 border border-dashed border-border-main/50 rounded-2xl bg-text-primary/[0.01]">
+                <BarChart2 size={48} strokeWidth={1.5} className="opacity-20 translate-y-2" />
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] font-heading">No Analytics Found</p>
+                  <p className="text-[10px] font-medium opacity-60">No debit transactions for this {chartRange}</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData[chartRange]}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  barCategoryGap="10%"
                 >
-                  {chartData[chartRange].map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={index === chartData[chartRange].length - 1 ? "url(#barGradient)" : "url(#inactiveGradient)"}
-                      className="transition-all duration-500 hover:opacity-80 cursor-pointer"
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity={0.4} />
+                    </linearGradient>
+                    <linearGradient id="inactiveGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--text-primary)" stopOpacity={0.1} />
+                      <stop offset="100%" stopColor="var(--text-primary)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--text-primary)" opacity={0.05} />
+                  <XAxis
+                    dataKey="day"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "var(--text-secondary)", fontSize: 11, fontWeight: 700 }}
+                    dy={15}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "var(--text-secondary)", fontSize: 10, fontWeight: 600 }}
+                    tickFormatter={(v) => v >= 1000 ? `${v / 1000}k` : v}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "var(--text-primary)", opacity: 0.03, radius: 4 }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-bg-card/90 backdrop-blur-xl border border-border-main p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                            <p className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-2">{label}</p>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-accent-blue" />
+                              <p className="text-lg font-bold text-text-primary font-heading tracking-tight">
+                                Rs. {payload[0].value.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar
+                    dataKey="amount"
+                    radius={[2, 2, 0, 0]}
+                    animationDuration={1500}
+                  >
+                    {chartData[chartRange].map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={index === chartData[chartRange].length - 1 ? "url(#barGradient)" : "url(#inactiveGradient)"}
+                        className="transition-all duration-500 hover:opacity-80 cursor-pointer"
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
