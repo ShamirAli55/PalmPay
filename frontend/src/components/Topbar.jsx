@@ -1,19 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser, UserButton } from "@clerk/clerk-react";
-import { Bell, Sun, Moon, Menu, ShieldCheck, Zap } from "lucide-react";
+import { Bell, Sun, Moon, Menu, ShieldCheck, Zap, CreditCard, Info } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import { dark } from "@clerk/themes";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 
 export default function Topbar() {
   const { user } = useUser();
   const navigate = useNavigate();
-  const { isDark, toggleTheme, toggleSidebar, securityEvents } = useWalletStore();
+  const { isDark, toggleTheme, toggleSidebar, notifications, fetchData } = useWalletStore();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
-  // Use real security events as notifications
-  const notifications = securityEvents?.slice(0, 5) || [];
+  // Sync notifications on mount
+  useEffect(() => {
+    if (user?.id) {
+        fetchData(user.id, user.fullName || user.username);
+    }
+  }, [user, fetchData]);
+
+  const recentNotifs = notifications.slice(0, 3);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const getIcon = (type) => {
+    switch (type) {
+      case "transaction": return <CreditCard size={14} />;
+      case "security": return <ShieldCheck size={14} />;
+      case "system":
+      case "update": return <Zap size={14} />;
+      default: return <Bell size={14} />;
+    }
+  };
+
+  const getIconBg = (type) => {
+    switch (type) {
+      case "transaction": return "bg-accent-blue/10 text-accent-blue";
+      case "security": return "bg-accent-red/10 text-accent-red";
+      case "system":
+      case "update": return "bg-accent-green/10 text-accent-green";
+      default: return "bg-text-secondary/10 text-text-secondary";
+    }
+  };
 
   return (
     <header className="h-[80px] flex items-center justify-between px-6 sm:px-10 bg-bg-main border-b border-border-main relative z-50">
@@ -33,8 +61,10 @@ export default function Topbar() {
             className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${isNotifOpen ? "bg-accent-blue/10 border-accent-blue text-accent-blue" : "bg-bg-card border-border-main text-text-secondary hover:text-text-primary"}`}
           >
             <Bell size={18} />
-            {notifications.length > 0 && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-accent-red rounded-full border-2 border-bg-main" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-red text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-bg-main shadow-lg shadow-accent-red/20">
+                 {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
             )}
           </button>
 
@@ -51,19 +81,24 @@ export default function Topbar() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/5 rounded-full blur-3xl pointer-events-none" />
                   <div className="flex items-center justify-between mb-4 relative z-10">
                     <span className="text-[11px] font-bold text-text-primary uppercase tracking-[0.2em] font-heading">Notifications</span>
-                    <span className="text-[9px] font-bold text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded-md">NEW</span>
+                    {unreadCount > 0 && <span className="text-[9px] font-bold text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded-md">NEW</span>}
                   </div>
 
                   <div className="space-y-3 relative z-10 max-h-[300px] overflow-y-auto no-scrollbar">
-                    {notifications.length > 0 ? (
-                      notifications.map((n, i) => (
-                        <div key={i} className="flex gap-4 p-3 rounded-xl bg-text-primary/2 hover:bg-text-primary/5 border border-transparent hover:border-border-main/50 transition-all group">
-                          <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${n.type === 'security' ? 'bg-accent-red/10 text-accent-red' : 'bg-accent-blue/10 text-accent-blue'}`}>
-                            {n.type === 'security' ? <Zap size={14} /> : <ShieldCheck size={14} />}
+                    {recentNotifs.length > 0 ? (
+                      recentNotifs.map((n) => (
+                        <div key={n._id} className={`flex gap-4 p-3 rounded-xl transition-all group border ${!n.isRead ? 'bg-accent-blue/[0.03] border-accent-blue/10 hover:border-accent-blue/20' : 'bg-text-primary/2 border-transparent hover:border-border-main/50'}`}>
+                          <div className={`w-10 h-10 rounded-lg shrink-0 flex items-center justify-center ${getIconBg(n.type)} shadow-sm`}>
+                            {getIcon(n.type)}
                           </div>
-                          <div className="min-w-0">
-                            <div className="text-[12px] font-bold text-text-primary uppercase tracking-tight truncate leading-tight mb-0.5">{n.event}</div>
-                            <div className="text-[9px] text-text-secondary font-medium opacity-60 uppercase tracking-widest">{n.time} • Local Device</div>
+                          <div className="min-w-0 pr-1">
+                            <div className={`text-[12px] font-bold uppercase tracking-tight truncate leading-tight mb-0.5 ${!n.isRead ? 'text-text-primary' : 'text-text-secondary/70'}`}>
+                                {n.title}
+                            </div>
+                            <div className="text-[10px] text-text-secondary font-medium opacity-60 leading-tight line-clamp-2 mb-1">{n.message}</div>
+                            <div className="text-[8px] text-text-secondary font-bold uppercase tracking-widest opacity-40">
+                                {format(new Date(n.createdAt), 'HH:mm')} • {format(new Date(n.createdAt), 'dd MMM')}
+                            </div>
                           </div>
                         </div>
                       ))

@@ -19,6 +19,17 @@ exports.enrollPalm = async (req, res) => {
 
         if (response.data.status === 'enrolled') {
             await User.findOneAndUpdate({ clerkId }, { palmEnrolled: true });
+            
+            // Notification for enrollment
+            try {
+                const Notification = require('../models/Notification');
+                await new Notification({
+                    userId: clerkId,
+                    title: 'Biometrics Enrolled',
+                    message: 'Your palm biometric signature has been successfully registered. You can now use it for secure transactions.',
+                    type: 'security'
+                }).save();
+            } catch (nErr) {}
         }
 
         res.json(response.data);

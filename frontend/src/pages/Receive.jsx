@@ -10,11 +10,9 @@ export default function Receive() {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const { transactions, fetchData, loading } = useWalletStore();
-  const [receiveAmount, setReceiveAmount] = useState("");
 
   const WALLET_ID = user?.id || "PALM-SYNC-PENDING";
-  // Protocol: PALM_PAY|clerkId|amount
-  const QR_VALUE = receiveAmount ? `PALM_PAY|${WALLET_ID}|${receiveAmount}` : WALLET_ID;
+  const QR_VALUE = WALLET_ID;
 
   // Real-time inbound transactions (filter for credits)
   const inboundHistory = transactions.filter(t => t.type === 'credit').slice(0, 5);
@@ -54,7 +52,7 @@ export default function Receive() {
           
           <div className="mb-10 text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight font-heading m-0">Receive Money</h1>
-            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Generate a custom payment request</p>
+            <p className="text-[11px] text-text-secondary mt-2 font-medium uppercase tracking-[0.2em] opacity-60">Scan barcode to receive funds</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 lg:gap-14 items-start mb-12">
@@ -86,27 +84,8 @@ export default function Receive() {
                 </div>
             </div>
 
-            {/* Input & ID Section - 3/5 columns on desktop */}
-            <div className="md:col-span-3 w-full flex flex-col gap-6">
-                <div className="bg-text-primary/5 rounded-2xl p-6 sm:p-8 border border-border-main relative overflow-hidden group hover:border-accent-blue/30 transition-all">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-                    <label className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.25em] mb-5 block font-heading">Request Amount (Optional)</label>
-                    <div className="relative flex items-center">
-                        <span className="text-2xl font-bold text-text-secondary/40 mr-4 font-heading">Rs.</span>
-                        <input 
-                            type="number"
-                            placeholder="0.00"
-                            value={receiveAmount}
-                            onChange={(e) => setReceiveAmount(e.target.value)}
-                            className="w-full bg-transparent border-none p-0 text-3xl sm:text-4xl font-bold text-text-primary tracking-tighter outline-none font-heading"
-                        />
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 opacity-40">
-                         <div className="w-1 h-1 rounded-full bg-text-secondary" />
-                         <p className="text-[9px] text-text-secondary font-bold uppercase tracking-widest italic">Beneficiary will see this amount auto-filled</p>
-                    </div>
-                </div>
-
+            {/* ID Section - 3/5 columns on desktop */}
+            <div className="md:col-span-3 w-full flex flex-col gap-6 justify-center">
                 <div className="bg-text-primary/5 border border-border-main rounded-2xl p-6 relative group overflow-hidden hover:border-accent-blue/30 transition-all">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">

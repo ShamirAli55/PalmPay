@@ -55,7 +55,22 @@ exports.addBank = async (req, res) => {
 // ─── DELETE /api/wallet/banks/:bankId ────────────────────────────────────────
 exports.removeBank = async (req, res) => {
     try {
+        const bank = await BankAccount.findById(req.params.bankId);
+        if (!bank) return res.status(404).json({ message: 'Bank account not found' });
+        
+        const { userId, bankName, accountNumberMasked } = bank;
         await BankAccount.findByIdAndDelete(req.params.bankId);
+
+        // Notification for bank removal
+        try {
+            await new Notification({
+                userId,
+                title: 'Bank Unlinked',
+                message: `The ${bankName} account (xxxx-${accountNumberMasked.slice(-4)}) has been removed.`,
+                type: 'system'
+            }).save();
+        } catch (nErr) {}
+
         res.json({ message: 'Bank account removed' });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -115,10 +115,21 @@ export const useWalletStore = create((set, get) => ({
     try {
       await api.patch(`/notifications/mark-all-read/${clerkId}`);
       set((state) => ({
-        notifications: state.notifications.map(n => ({ ...n, read: true }))
+        notifications: state.notifications.map(n => ({ ...n, isRead: true }))
       }));
     } catch (err) {
       console.error('Notification Error:', err);
+    }
+  },
+
+  markNotificationAsRead: async (id) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      set((state) => ({
+        notifications: state.notifications.map(n => n._id === id ? { ...n, isRead: true } : n)
+      }));
+    } catch (err) {
+      console.error('Single Notification Error:', err);
     }
   },
 

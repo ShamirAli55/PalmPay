@@ -126,6 +126,20 @@ exports.updateProfile = async (req, res) => {
         }
 
         await user.save();
+
+        // Notification for profile update
+        try {
+            const Notification = require('../models/Notification');
+            await new Notification({
+                userId: clerkId,
+                title: 'Profile Updated',
+                message: 'Your profile information has been successfully updated.',
+                type: 'system'
+            }).save();
+        } catch (nErr) {
+            console.error('Profile update notification error:', nErr);
+        }
+
         res.json({ status: 'success', user });
     } catch (err) {
         console.error('updateProfile error:', err);
