@@ -40,13 +40,15 @@ function StatCard({ card }) {
   };
   const Icon = icons[card.icon] || TrendingUp;
 
+  const isInteractive = card.id === "active-auth";
+
   return (
-    <div className="bg-bg-card border border-border-main rounded-2xl p-6 shadow-sm relative overflow-hidden group transition-all hover:shadow-md cursor-default">
+    <div className={`bg-bg-card border border-border-main rounded-2xl p-6 shadow-sm relative overflow-hidden group transition-all hover:shadow-md ${isInteractive ? "cursor-pointer hover:border-accent-blue/40" : "cursor-default"}`}>
       <div className="flex justify-between items-center mb-5">
         <span className="text-[11px] font-bold tracking-widest text-text-secondary uppercase font-heading">
           {card.label}
         </span>
-        <div className="bg-accent-blue/10 rounded-xl p-2 flex items-center group-hover:bg-accent-blue/20 transition-all">
+        <div className={`rounded-xl p-2 flex items-center transition-all ${isInteractive ? "bg-accent-blue/20 group-hover:bg-accent-blue/30 scale-110" : "bg-accent-blue/10 group-hover:bg-accent-blue/20"}`}>
           <Icon className="w-4 h-4 text-accent-blue" />
         </div>
       </div>
@@ -67,11 +69,21 @@ function StatCard({ card }) {
             <div className="w-full h-1.5 bg-text-primary/5 rounded-full overflow-hidden">
               <div className="h-full bg-accent-blue rounded-full" style={{ width: `${card.progress}%` }} />
             </div>
-            <span className="text-[11px] text-text-secondary mt-1.5 block font-medium">{card.sub}</span>
+            <div className="flex justify-between items-center mt-1.5 ">
+               <span className="text-[11px] text-text-secondary font-medium">{card.sub}</span>
+               {isInteractive && (
+                 <span className="text-[10px] text-accent-blue font-bold tracking-tight opacity-0 group-hover:opacity-100 transition-opacity">Tap to Scan</span>
+               )}
+            </div>
           </div>
         )}
         {!card.showProgress && !card.change && (
-          <span className="text-[11px] text-text-secondary font-medium">{card.sub}</span>
+          <div className="flex justify-between items-center">
+             <span className="text-[11px] text-text-secondary font-medium">{card.sub}</span>
+             {isInteractive && (
+                 <span className="text-[10px] text-accent-blue font-bold tracking-tight opacity-0 group-hover:opacity-100 transition-opacity">Manage</span>
+               )}
+          </div>
         )}
       </div>
 
@@ -155,7 +167,7 @@ export default function Dashboard() {
         }}
       />
 
-      <VaultActions className="grid grid-cols-2 lg:grid-cols-4" />
+      <VaultActions />
 
       {/* Charts & Balance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -336,13 +348,13 @@ export default function Dashboard() {
       </div>
 
       {/* Security Status - The 'Normal' Placeholder */}
-      <div className="bg-bg-card border border-border-main rounded-2xl p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 mb-12 group transition-all hover:shadow-md">
-        <div className="flex items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-accent-blue/10 flex items-center justify-center border border-accent-blue/20 group-hover:scale-105 transition-transform duration-500 shadow-sm shadow-accent-blue/10">
-            <Hand className="w-8 h-8 text-accent-blue" />
+      <div className="bg-bg-card border border-border-main rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8 mb-12 group transition-all hover:shadow-md">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center text-center sm:text-left gap-4 sm:gap-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-accent-blue/10 flex items-center justify-center border border-accent-blue/20 shrink-0 group-hover:scale-105 transition-transform duration-500 shadow-sm shadow-accent-blue/10 text-accent-blue">
+            <Hand className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">Palm Recognition Security</h2>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg sm:text-xl font-bold text-text-primary font-heading tracking-tight leading-tight">Palm Recognition Security</h2>
             <p className="text-[12px] text-text-secondary font-medium max-w-[320px] leading-relaxed">
               {palmEnrolled 
                 ? "Your palm scan is active. Your account is fully protected." 
@@ -351,8 +363,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="hidden md:flex flex-col items-end mr-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="hidden sm:flex flex-col items-center sm:items-end sm:mr-4">
             <span className={`text-[10px] font-black uppercase tracking-widest ${palmEnrolled ? "text-accent-green" : "text-accent-red"}`}>
               {palmEnrolled ? "Protected" : "Action Required"}
             </span>
@@ -362,7 +374,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => navigate("/security")}
-            className="flex-1 md:flex-none px-10 py-4 bg-bg-main border border-border-main rounded-xl text-[12px] font-bold text-text-primary uppercase tracking-widest hover:bg-text-primary/5 transition-all active:scale-95 font-heading"
+            className="w-full sm:w-auto px-8 sm:px-10 py-3.5 sm:py-4 bg-bg-main border border-border-main rounded-xl text-[12px] font-bold text-text-primary uppercase tracking-widest hover:bg-text-primary/5 transition-all active:scale-95 font-heading"
           >
             Security Settings
           </button>
