@@ -1,4 +1,14 @@
 const Notification = require('../models/Notification');
+const { 
+    emitNotificationReadUpdated, 
+    emitNotificationAllRead, 
+    emitUnreadCountUpdated 
+} = require('../realtime/emitters/notificationEmitter');
+
+// Utility to get current unread count
+const getUnreadCount = async (clerkId) => {
+    return await Notification.countDocuments({ userId: clerkId, isRead: false });
+};
 
 // GET /api/notifications/:clerkId
 exports.getNotifications = async (req, res) => {
@@ -16,6 +26,17 @@ exports.markAsRead = async (req, res) => {
     try {
         const { id } = req.params;
         const notif = await Notification.findByIdAndUpdate(id, { isRead: true }, { new: true });
+        
+        if (notif) {
+            emitNotificationReadUpdated({ 
+                clerkId: notif.userId, 
+                notificationId: notif._id, 
+                isRead: true 
+            });
+            const unreadCount = await getUnreadCount(notif.userId);
+            emitUnreadCountUpdated({ clerkId: notif.userId, unreadCount });
+        }
+
         res.json(notif);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -27,6 +48,10 @@ exports.markAllAsRead = async (req, res) => {
     try {
         const { clerkId } = req.params;
         await Notification.updateMany({ userId: clerkId, isRead: false }, { isRead: true });
+        
+        emitNotificationAllRead({ clerkId });
+        emitUnreadCountUpdated({ clerkId, unreadCount: 0 });
+
         res.json({ message: 'All notifications marked as read' });
     } catch (err) {
         res.status(500).json({ error: err.message });

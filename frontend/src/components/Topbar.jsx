@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser, UserButton } from "@clerk/clerk-react";
 import { Bell, Sun, Moon, Menu, ShieldCheck, Zap, CreditCard, Info } from "lucide-react";
@@ -12,6 +12,21 @@ export default function Topbar() {
   const navigate = useNavigate();
   const { isDark, toggleTheme, toggleSidebar, notifications, fetchData } = useWalletStore();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const bellRef = useRef(null);
+
+  // Compute fixed position so the dropdown is never clipped by overflow-hidden ancestors
+  const getDropdownStyle = () => {
+    if (!bellRef.current) return {};
+    const rect = bellRef.current.getBoundingClientRect();
+    const dropdownWidth = Math.min(320, window.innerWidth - 24);
+    const top = rect.bottom + 8;
+    // Align to right edge of button, but clamp so it stays within viewport
+    const right = window.innerWidth - rect.right;
+    const clampedRight = Math.max(12, right);
+    return { top, right: clampedRight };
+  };
+
+  const dropdownStyle = isNotifOpen ? getDropdownStyle() : {};
 
   // Sync notifications on mount
   useEffect(() => {
@@ -57,6 +72,7 @@ export default function Topbar() {
       <div className="flex items-center gap-3 ml-auto">
         <div className="relative">
           <button
+            ref={bellRef}
             onClick={() => setIsNotifOpen(!isNotifOpen)}
             className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${isNotifOpen ? "bg-accent-blue/10 border-accent-blue text-accent-blue" : "bg-bg-card border-border-main text-text-secondary hover:text-text-primary"}`}
           >
@@ -76,7 +92,8 @@ export default function Topbar() {
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute right-0 mt-3 w-80 bg-bg-card border border-border-main rounded-2xl shadow-2xl p-5 z-50 overflow-hidden"
+                  style={dropdownStyle}
+                  className="fixed w-[min(320px,calc(100vw-24px))] bg-bg-card border border-border-main rounded-2xl shadow-2xl p-5 z-50 overflow-hidden"
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-accent-blue/5 rounded-full blur-3xl pointer-events-none" />
                   <div className="flex items-center justify-between mb-4 relative z-10">

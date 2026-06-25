@@ -259,6 +259,54 @@ export const useWalletStore = create((set, get) => ({
     ];
   },
 
+  // Realtime Apply Actions
+  applyBalanceUpdatedEvent: (event) => {
+    set((state) => ({
+      balance: event.balance,
+      // If balance is linked to specific card models, update them too
+      cards: state.cards.map(card => ({ ...card, balance: event.balance })) 
+    }));
+  },
+
+  applyTransactionCreatedEvent: (event) => {
+    set((state) => {
+      // Avoid duplicates
+      if (state.transactions.find(t => t._id === event.transaction._id)) return state;
+      return {
+        transactions: [event.transaction, ...state.transactions]
+      };
+    });
+  },
+
+  applyNotificationNewEvent: (event) => {
+    set((state) => {
+      if (state.notifications.find(n => n._id === event.notification._id)) return state;
+      return {
+        notifications: [event.notification, ...state.notifications]
+      };
+    });
+  },
+
+  applyNotificationReadUpdatedEvent: (event) => {
+    set((state) => ({
+      notifications: state.notifications.map(n => 
+        n._id === event.notificationId ? { ...n, isRead: event.isRead } : n
+      )
+    }));
+  },
+
+  applyNotificationAllReadEvent: () => {
+    set((state) => ({
+      notifications: state.notifications.map(n => ({ ...n, isRead: true }))
+    }));
+  },
+
+  applyUnreadCountUpdatedEvent: (event) => {
+    // Current store doesn't have an explicit unreadCount field, it derives it.
+    // If we wanted to add one, we would do it here. 
+    // For now, the array updates above are sufficient for derived state.
+  },
+
   // Utility
   isDark: true,
   toggleTheme: () => set((state) => ({ isDark: !state.isDark })),

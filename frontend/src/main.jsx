@@ -7,6 +7,7 @@ import { ClerkProvider } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 import { Toaster } from "react-hot-toast";
 import AuthNotifier from "./components/AuthNotifier";
+import SocketManager from "./realtime/SocketManager";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       }}
     >
       <AuthNotifier />
+      <SocketManager />
       <RouterProvider router={router} />
       <Toaster 
         position="bottom-right"

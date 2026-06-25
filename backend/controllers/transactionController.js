@@ -5,6 +5,14 @@ const Wallet      = require('../models/Wallet');
 const Transaction  = require('../models/Transaction');
 const BankAccount  = require('../models/BankAccount');
 const Notification = require('../models/Notification');
+const { emitWalletBalanceUpdated } = require('../realtime/emitters/walletEmitter');
+const { emitTransactionCreated } = require('../realtime/emitters/transactionEmitter');
+const { emitNotificationNew, emitUnreadCountUpdated } = require('../realtime/emitters/notificationEmitter');
+
+// Unread count helper
+const getUnreadCount = async (clerkId) => {
+    return await Notification.countDocuments({ userId: clerkId, isRead: false });
+};
 
 const PALM_AUTH_URL = process.env.PALM_AUTH_URL || 'http://localhost:8000';
 
@@ -128,24 +136,38 @@ exports.createTransaction = async (req, res) => {
         // System Post-Journaling (Create notifications asynchronously outside transaction for speed)
         try {
             // Notification for Sender
-            await new Notification({
+            const notifSender = await new Notification({
                 userId: clerkId,
                 title: 'Payment Sent',
                 message: `You successfully sent Rs. ${amtNum.toLocaleString()} to ${recipient || recipientUser?.name || 'External Account'}.`,
                 type: 'transaction'
             }).save();
 
+            emitWalletBalanceUpdated({ clerkId, wallet: senderWallet, reason: 'SEND', transactionId: txOut._id });
+            emitTransactionCreated({ clerkId, transaction: txOut });
+            emitNotificationNew({ clerkId, notification: notifSender });
+            getUnreadCount(clerkId).then(count => emitUnreadCountUpdated({ clerkId, unreadCount: count }));
+
             // Notification for Receiver
             if (recipientWallet) {
-                await new Notification({
+                const notifReceiver = await new Notification({
                     userId: recipientId,
                     title: 'Funds Received',
                     message: `You received Rs. ${amtNum.toLocaleString()} from ${senderUser.name || 'User'}.`,
                     type: 'transaction'
                 }).save();
+
+                emitWalletBalanceUpdated({ clerkId: recipientId, wallet: recipientWallet, reason: 'RECEIVE', transactionId: txOut._id });
+                // We need the transaction view for the receiver too
+                // For receiver, the transaction object should be their view (credit)
+                const txIn = await Transaction.findOne({ userId: recipientId, reference: txOut.reference });
+                if (txIn) emitTransactionCreated({ clerkId: recipientId, transaction: txIn });
+                
+                emitNotificationNew({ clerkId: recipientId, notification: notifReceiver });
+                getUnreadCount(recipientId).then(count => emitUnreadCountUpdated({ clerkId: recipientId, unreadCount: count }));
             }
         } catch (notifErr) {
-            console.error('Async Notification Error:', notifErr);
+            console.error('Async Notification/Realtime Error:', notifErr);
         }
 
         res.json({ 
@@ -212,14 +234,19 @@ exports.addFunds = async (req, res) => {
 
         // Journal the deposit
         try {
-            await new Notification({
+            const notif = await new Notification({
                 userId: clerkId,
                 title: 'Funds Added',
                 message: `Rs. ${amtNum.toLocaleString()} successfully added to your wallet from ${source || 'External Source'}.`,
                 type: 'transaction'
             }).save();
+
+            emitWalletBalanceUpdated({ clerkId, wallet, reason: 'DEPOSIT', transactionId: tx._id });
+            emitTransactionCreated({ clerkId, transaction: tx });
+            emitNotificationNew({ clerkId, notification: notif });
+            getUnreadCount(clerkId).then(count => emitUnreadCountUpdated({ clerkId, unreadCount: count }));
         } catch (notifErr) {
-            console.error('Deposit Notification Error:', notifErr);
+            console.error('Deposit Notification/Realtime Error:', notifErr);
         }
 
         const banks = await BankAccount.find({ userId: clerkId });

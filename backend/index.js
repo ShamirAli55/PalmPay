@@ -14,6 +14,12 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
+const http = require('http');
+const { initSocketServer } = require('./realtime/socketServer');
+
+const server = http.createServer(app);
+initSocketServer(server);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -47,4 +53,4 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => console.log(`🚀  PalmPay API running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀  PalmPay API running on port ${PORT}`));
