@@ -179,10 +179,12 @@ export default function Settings() {
   const { fetchPalmStatus } = usePalmStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [saved, setSaved]       = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [phone, setPhone]       = useState("");
   const [username, setUsername] = useState("");
   const [name, setName]         = useState("");
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  const [formErrors, setFormErrors]         = useState({});
 
   useEffect(() => {
     if (clerkUser?.id) {
@@ -208,16 +210,39 @@ export default function Settings() {
   const setTab = (tab) => setSearchParams(tab === "Security" ? { tab: "security" } : {});
 
   const handleSave = async () => {
-    if (clerkUser?.id) {
-      const normalizedPhone    = normalizePhone(phone);
-      const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (isSaving) return; // Prevent double-submit
+    setFormErrors({});
+    const errors = {};
 
-      const success = await updateProfile(clerkUser.id, {
-        phone: normalizedPhone,
-        username: normalizedUsername,
-        name: name.trim()
-      });
-      if (success) window.location.reload();
+    const trimmedName = name.trim();
+    if (trimmedName && trimmedName.length < 1) errors.name = 'Name is required';
+    if (trimmedName && trimmedName.length > 100) errors.name = 'Name must be 100 characters or less';
+    if (trimmedName && !/[a-zA-Z]/.test(trimmedName)) errors.name = 'Name must contain at least one letter';
+
+    const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (username && cleanUsername.length < 3) errors.username = 'Palm ID must be at least 3 characters';
+    if (username && cleanUsername.length > 30) errors.username = 'Palm ID must be 30 characters or less';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    if (clerkUser?.id) {
+      setIsSaving(true);
+      try {
+        const normalizedPhone    = normalizePhone(phone);
+        const normalizedUsername = cleanUsername;
+
+        const success = await updateProfile(clerkUser.id, {
+          phone: normalizedPhone,
+          username: normalizedUsername,
+          name: trimmedName
+        });
+        if (success) window.location.reload();
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -267,9 +292,11 @@ export default function Settings() {
                   <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.2em] mb-3 font-heading">Full Name</div>
                   <input
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                    onChange={(e) => { setName(e.target.value); setFormErrors(p => ({...p, name: ""})); }}
+                    maxLength={100}
+                    className={`w-full bg-text-primary/5 border rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner ${formErrors.name ? "border-accent-red/50" : "border-border-main"}`}
                   />
+                  {formErrors.name && <p className="text-[10px] text-accent-red mt-1.5 font-bold">{formErrors.name}</p>}
                   <p className="text-[9px] text-text-secondary mt-2 opacity-50 italic">How your name appears to others in transfers.</p>
                 </div>
 
@@ -292,12 +319,14 @@ export default function Settings() {
                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary font-bold font-heading">@</span>
                     <input
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e) => { setUsername(e.target.value.replace(/[^a-z0-9_]/gi, "").toLowerCase()); setFormErrors(p => ({...p, username: ""})); }}
                       placeholder="yourname"
-                      className="w-full bg-text-primary/5 border border-border-main rounded-xl pl-10 pr-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
+                      maxLength={30}
+                      className={`w-full bg-text-primary/5 border rounded-xl pl-10 pr-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner ${formErrors.username ? "border-accent-red/50" : "border-border-main"}`}
                     />
                   </div>
-                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60 italic">Your unique handle for instant transfers. No spaces or special characters.</p>
+                  {formErrors.username && <p className="text-[10px] text-accent-red mt-1.5 font-bold">{formErrors.username}</p>}
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60 italic">Your unique handle. Letters, numbers, and underscores only.</p>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -349,10 +378,10 @@ export default function Settings() {
 
             <button 
               onClick={handleSave} 
-              disabled={!hasChanges && !saved}
-              className={`w-full py-5 rounded-xl font-bold text-sm tracking-widest text-white transition-all shadow-2xl font-heading uppercase ${!hasChanges && !saved ? 'opacity-40 cursor-not-allowed grayscale bg-text-primary/10' : saved ? 'bg-accent-green' : 'bg-accent-blue shadow-accent-blue/20 hover:brightness-110 active:scale-[0.98]'}`}
+              disabled={(!hasChanges && !saved) || isSaving}
+              className={`w-full py-5 rounded-xl font-bold text-sm tracking-widest text-white transition-all shadow-2xl font-heading uppercase ${(!hasChanges && !saved) || isSaving ? 'opacity-40 cursor-not-allowed grayscale bg-text-primary/10' : saved ? 'bg-accent-green' : 'bg-accent-blue shadow-accent-blue/20 hover:brightness-110 active:scale-[0.98]'}`}
             >
-              {saved ? 'Saved ✓' : 'Save Changes'}
+              {isSaving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Changes'}
             </button>
 
             <button className="w-full py-4 border border-accent-red/20 text-accent-red rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-accent-red/5 transition-all flex items-center justify-center gap-2">

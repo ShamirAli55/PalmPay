@@ -38,18 +38,33 @@ export default function AddCard() {
   const [cardLabel, setCardLabel] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [labelError, setLabelError] = useState("");
 
   const handleIssueRequest = () => {
+    const cleanLabel = cardLabel.trim();
+    if (cleanLabel.length > 50) {
+      setLabelError('Card label must be 50 characters or less');
+      return;
+    }
+    setLabelError('');
     setIsScannerOpen(true);
   };
 
   const onScanVerified = async () => {
-    const success = await issueCard(user.id, {
-        label: cardLabel || selectedTemplate.label,
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const cleanLabel = cardLabel.trim().slice(0, 50);
+      const result = await issueCard(user.id, {
+        label: cleanLabel || selectedTemplate.label,
         brand: selectedTemplate.brand,
         color: selectedTemplate.color
-    });
-    if (success) setSuccess(true);
+      });
+      if (result) setSuccess(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -107,21 +122,23 @@ export default function AddCard() {
 
               <section>
                 <div className="text-[11px] font-bold text-text-secondary tracking-[0.2em] uppercase mb-4 opacity-50">Custom Label</div>
-                <input 
+                 <input 
                    placeholder="e.g. SHOPPING CARD"
                    value={cardLabel}
-                   onChange={e => setCardLabel(e.target.value.toUpperCase())}
-                   className="w-full bg-text-primary/5 border border-border-main rounded-2xl px-6 py-4 text-[14px] font-bold text-text-primary outline-none focus:border-accent-blue transition-all uppercase tracking-widest"
-                />
+                   onChange={e => { setCardLabel(e.target.value.toUpperCase().slice(0, 50)); setLabelError(''); }}
+                   maxLength={50}
+                   className={`w-full bg-text-primary/5 border rounded-2xl px-6 py-4 text-[14px] font-bold text-text-primary outline-none focus:border-accent-blue transition-all uppercase tracking-widest ${labelError ? 'border-accent-red/50' : 'border-border-main'}`}
+                 />
+                 {labelError && <p className="text-[10px] text-accent-red mt-1.5 font-bold">{labelError}</p>}
               </section>
 
               <button
                 onClick={handleIssueRequest}
-                disabled={loading}
+                disabled={loading || submitting}
                 className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-2xl text-white text-[12px] font-bold tracking-[0.25em] shadow-xl shadow-accent-blue/20 transition-all flex items-center justify-center gap-3 font-heading uppercase"
               >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : <Shield size={20} />} 
-                <span>{loading ? "Issuing Card..." : "Authorize Issuance"}</span>
+                {(loading || submitting) ? <Loader2 className="animate-spin" size={20} /> : <Shield size={20} />} 
+                <span>{(loading || submitting) ? "Issuing Card..." : "Authorize Issuance"}</span>
               </button>
             </div>
 
