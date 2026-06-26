@@ -1,0 +1,19 @@
+{
+  "name": "palmpay-wallet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:frontend": "cd frontend && pnpm run dev --host",
+    "dev:backend": "cd backend && pnpm start",
+    "dev:ai": "cd backend/palm_auth && ..\\\\venv\\\\Scripts\\\\python main.py",
+    "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\" \"pnpm run dev:ai\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.28.0",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
