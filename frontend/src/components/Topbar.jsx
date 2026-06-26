@@ -55,27 +55,27 @@ export default function Topbar() {
       }}
       animate={hidden ? "hidden" : "visible"}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="h-[80px] flex items-center justify-between px-6 sm:px-10 bg-bg-main/80 backdrop-blur-md border-b border-border-main sticky top-0 z-[60] shrink-0"
+      className="h-[70px] sm:h-[80px] flex items-center justify-between px-4 sm:px-10 bg-bg-main/80 backdrop-blur-md border-b border-border-main sticky top-0 z-[60] shrink-0"
     >
       {/* Mobile Menu Button */}
       <button
         onClick={toggleSidebar}
-        className="lg:hidden p-2.5 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95"
+        className="lg:hidden p-2 bg-bg-card border border-border-main rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95 shadow-sm"
       >
-        <Menu size={20} />
+        <Menu size={18} />
       </button>
 
       {/* Right Side */}
-      <div className="flex items-center gap-3 ml-auto">
+      <div className="flex items-center gap-2 sm:gap-3 ml-auto">
         <div className="relative">
           <button
             onClick={() => navigate("/notifications")}
-            className="w-10 h-10 rounded-xl border bg-bg-card border-border-main text-text-secondary hover:text-text-primary transition-all active:scale-95 flex items-center justify-center relative"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border bg-bg-card border-border-main text-text-secondary hover:text-text-primary transition-all active:scale-95 flex items-center justify-center relative"
           >
-            <Bell size={18} />
+            <Bell size={16} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-red text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-bg-main shadow-lg shadow-accent-red/20">
-                 {unreadCount > 9 ? '9+' : unreadCount}
+              <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-accent-red text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-bg-main shadow-lg shadow-accent-red/20">
+                 {unreadCount > 9 ? '9' : unreadCount}
               </span>
             )}
           </button>
@@ -83,18 +83,15 @@ export default function Topbar() {
 
         <button
           onClick={toggleTheme}
-          className="w-10 h-10 rounded-xl bg-bg-card border border-border-main flex items-center justify-center text-text-secondary hover:text-text-primary transition-all active:scale-95"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-bg-card border border-border-main flex items-center justify-center text-text-secondary hover:text-text-primary transition-all active:scale-95"
         >
-          {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
-        <div className="flex items-center gap-3 pl-3 border-l border-border-main">
-          <div className="hidden sm:block text-right">
-            <div className="text-[13px] font-bold text-text-primary leading-none uppercase tracking-tight">
-              {user?.firstName} {user?.lastName}
-            </div>
-            <div className="text-[10px] text-text-secondary font-bold mt-1 uppercase tracking-widest opacity-60">
-              Verified Account
+        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-border-main">
+          <div className="hidden md:block text-right">
+            <div className="text-[12px] font-bold text-text-primary leading-none uppercase tracking-tight">
+              {user?.firstName}
             </div>
           </div>
           <div className="relative">
@@ -102,13 +99,12 @@ export default function Topbar() {
               appearance={{
                 baseTheme: isDark ? dark : undefined,
                 elements: {
-                  userButtonAvatarBox: "w-9 h-9 rounded-[10px]",
+                  userButtonAvatarBox: "w-8 h-8 sm:w-9 sm:h-9 rounded-[10px]",
                   userButtonTrigger: "focus:shadow-none rounded-[12px]",
                 },
               }}
             />
-            {/* Real-time Status Dot migrated from Sidebar */}
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent-green border-2 border-bg-main rounded-full shadow-[0_0_8px_var(--accent-green)]" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-accent-green border-2 border-bg-main rounded-full shadow-[0_0_8px_var(--accent-green)]" />
           </div>
         </div>
       </div>

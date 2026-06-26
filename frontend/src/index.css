@@ -102,6 +102,18 @@ h4,
   * {
     @apply border-border-main;
   }
+  
+  button, a, [role="button"] {
+    @apply cursor-pointer transition-all duration-200;
+  }
+
+  button:disabled, a:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  input, textarea, select {
+    @apply outline-none focus:ring-1 focus:ring-accent-blue/30 transition-all;
+  }
 }
 
 /*

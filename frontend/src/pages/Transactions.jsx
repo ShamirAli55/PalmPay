@@ -204,13 +204,13 @@ export default function Transactions() {
       </div>
 
       {/* Table container */}
-      <div className="bg-bg-card border border-border-main rounded-xl overflow-hidden shadow-sm overflow-x-auto no-scrollbar">
-        <div className="min-w-[800px]">
-            <div className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-6 py-4 border-b border-border-main bg-text-primary/2 gap-4">
+      <div className="bg-bg-card border border-border-main rounded-xl overflow-hidden shadow-sm overflow-x-auto no-scrollbar transition-all hover:shadow-md duration-300">
+        <div className="min-w-[750px]">
+            <div className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-5 sm:px-6 py-4 border-b border-border-main bg-text-primary/2 gap-3 sm:gap-4">
             {["RECIPIENT", "CATEGORY", "DATE & TIME", "STATUS", "AMOUNT"].map((col, i) => (
                 <div 
                   key={col} 
-                  className={`text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading ${
+                  className={`text-[10px] sm:text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading ${
                     col === "STATUS" || col === "DATE & TIME" ? "justify-center text-center" : 
                     col === "AMOUNT" ? "justify-end text-right" : 
                     "justify-start"
@@ -230,43 +230,43 @@ export default function Transactions() {
                 return (
                   <div
                     key={txn._id || idx}
-                    className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-6 py-5 items-center gap-4 border-b border-border-main/50 hover:bg-text-primary/2 transition-all cursor-pointer group"
+                    className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-5 sm:px-6 py-4 sm:py-5 items-center gap-3 sm:gap-4 border-b border-border-main/50 hover:bg-text-primary/2 transition-all cursor-pointer group"
                   >
                     {/* Recipient */}
-                    <div className="flex items-center gap-4 min-w-0 h-full">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 h-full">
                       <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
                       <div className="min-w-0">
-                        <div className="text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
-                        <div className="text-[11px] text-text-secondary truncate mt-1 font-medium">{txn.description || "Transfer"}</div>
+                        <div className="text-[13px] sm:text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
+                        <div className="text-[10px] sm:text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Transfer"}</div>
                       </div>
                     </div>
 
                     {/* Category */}
                     <div className="flex items-center h-full">
-                      <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-3 py-1.5 text-[10px] text-text-secondary font-bold font-heading uppercase">
-                        <CatIcon size={12} /> {txn.category || "Transfer"}
+                      <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-2.5 py-1.5 text-[9px] sm:text-[10px] text-text-secondary font-bold font-heading uppercase">
+                        <CatIcon size={11} className="shrink-0" /> <span className="truncate">{txn.category || "Transfer"}</span>
                       </div>
                     </div>
 
                     {/* Date/Time */}
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <div className="text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
-                        <div className="text-[11px] text-text-secondary font-medium tracking-widest mt-1 uppercase">{formatTxnTime(txn.date)}</div>
+                        <div className="text-[12px] sm:text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
+                        <div className="text-[10px] sm:text-[11px] text-text-secondary font-medium tracking-widest mt-1 uppercase whitespace-nowrap">{formatTxnTime(txn.date)}</div>
                       </div>
                     </div>
 
                     {/* Status */}
                     <div className="flex items-center justify-center h-full">
-                      <div className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-bold font-heading uppercase tracking-wide ${sc.text} ${sc.bg}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} animate-pulse`} />
-                        {txn.status}
+                      <div className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[9px] sm:text-[10px] font-bold font-heading uppercase tracking-wide ${sc.text} ${sc.bg}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} animate-pulse shrink-0`} />
+                        <span className="truncate">{txn.status}</span>
                       </div>
                     </div>
 
                     {/* Amount */}
                     <div className="flex items-center justify-end h-full">
-                      <div className={`text-[16px] font-bold text-right font-heading tracking-tighter ${isPositive ? "text-accent-green" : "text-accent-red"}`}>
+                      <div className={`text-[14px] sm:text-[16px] font-bold text-right font-heading tracking-tighter ${isPositive ? "text-accent-green" : "text-text-primary"}`}>
                         {isPositive ? "+" : ""}
                         Rs. {Math.abs(txn.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </div>

@@ -21,7 +21,7 @@ export default function AppLayout() {
       <div className="flex flex-1 flex-col overflow-y-auto no-scrollbar relative">
         <Topbar />
 
-        <main className="p-4 md:p-6">
+        <main className="p-4 md:p-6 w-full max-w-[1600px] mx-auto">
           <Outlet />
         </main>
       </div>
