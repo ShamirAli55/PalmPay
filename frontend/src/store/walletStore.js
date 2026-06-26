@@ -12,6 +12,11 @@ export const useWalletStore = create((set, get) => ({
   securityEvents: [],
   trustedDevices: [],
   loading: false,
+<<<<<<< HEAD
+  sending: false,     // guard for sendMoney
+  depositing: false,  // guard for addFunds
+=======
+>>>>>>> origin/main
   isSecure: true,
   palmEnrolled: false,
   users: [],
@@ -70,15 +75,31 @@ export const useWalletStore = create((set, get) => ({
 
   // Txns
   sendMoney: async (clerkId, data, palmImageBlob) => {
+<<<<<<< HEAD
+    // Prevent concurrent duplicate submissions
+    if (get().sending) {
+      toast.error('A transfer is already in progress', { id: 'txn-duplicate' });
+      return false;
+    }
+    set({ loading: true, sending: true });
+=======
     set({ loading: true });
+>>>>>>> origin/main
     const formData = new FormData();
     formData.append('clerkId', clerkId);
     if (data.recipientId) formData.append('recipientId', data.recipientId);
     if (data.bankId) formData.append('bankId', data.bankId);
+<<<<<<< HEAD
+    formData.append('recipient', data.recipient || '');
+    formData.append('amount', String(data.amount));
+    formData.append('category', data.category || 'Transfer');
+    formData.append('description', (data.description || '').slice(0, 500));
+=======
     formData.append('recipient', data.recipient);
     formData.append('amount', data.amount);
     formData.append('category', data.category || 'Transfer');
     formData.append('description', data.description || '');
+>>>>>>> origin/main
     formData.append('palm_image', palmImageBlob, 'auth.jpg');
 
     try {
@@ -86,24 +107,47 @@ export const useWalletStore = create((set, get) => ({
       set((state) => ({
         balance: res.data.balance,
         transactions: [res.data.transaction, ...state.transactions],
+<<<<<<< HEAD
+        loading: false,
+        sending: false,
+=======
         loading: false
+>>>>>>> origin/main
       }));
       toast.success('Transfer Successful', { id: 'txn-success' });
       return true;
     } catch (err) {
+<<<<<<< HEAD
+      set({ loading: false, sending: false });
+=======
       set({ loading: false });
+>>>>>>> origin/main
       toast.error(err.response?.data?.message || 'Transaction failed', { id: 'txn-error' });
       return false;
     }
   },
 
   addFunds: async (clerkId, data, palmImageBlob) => {
+<<<<<<< HEAD
+    // Prevent concurrent duplicate deposit submissions
+    if (get().depositing) {
+      toast.error('A deposit is already in progress', { id: 'deposit-duplicate' });
+      return false;
+    }
+    set({ loading: true, depositing: true });
+    const formData = new FormData();
+    formData.append('clerkId', clerkId);
+    formData.append('bankId', data.bankId || '');
+    formData.append('amount', String(data.amount));
+    formData.append('source', (data.source || 'Bank Link').slice(0, 100));
+=======
     set({ loading: true });
     const formData = new FormData();
     formData.append('clerkId', clerkId);
     formData.append('bankId', data.bankId);
     formData.append('amount', data.amount);
     formData.append('source', data.source || 'Bank Link');
+>>>>>>> origin/main
     formData.append('palm_image', palmImageBlob, 'auth.jpg');
 
     try {
@@ -111,12 +155,21 @@ export const useWalletStore = create((set, get) => ({
       set((state) => ({
         balance: res.data.balance,
         transactions: [res.data.transaction, ...state.transactions],
+<<<<<<< HEAD
+        loading: false,
+        depositing: false,
+=======
         loading: false
+>>>>>>> origin/main
       }));
       toast.success('Funds added', { id: 'deposit-success' });
       return true;
     } catch (err) {
+<<<<<<< HEAD
+      set({ loading: false, depositing: false });
+=======
       set({ loading: false });
+>>>>>>> origin/main
       toast.error(err.response?.data?.message || 'Deposit failed', { id: 'deposit-error' });
       return false;
     }

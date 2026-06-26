@@ -6,6 +6,10 @@ import { useWalletStore } from "../store/walletStore";
 import PalmScanner from "../components/ui/PalmScanner";
 
 const QUICK_AMOUNTS = [500, 1000, 5000, 10000];
+<<<<<<< HEAD
+const MAX_DEPOSIT_AMOUNT = 10_000_000;
+=======
+>>>>>>> origin/main
 
 export default function AddMoney() {
   const { user } = useUser();
@@ -14,6 +18,11 @@ export default function AddMoney() {
   const [amount, setAmount] = useState("500.00");
   const [success, setSuccess] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+<<<<<<< HEAD
+  const [amountError, setAmountError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+=======
+>>>>>>> origin/main
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,7 +40,14 @@ export default function AddMoney() {
     const parts = cleaned.split(".");
     if (parts.length > 2) return;
     if (parts[1] && parts[1].length > 2) return;
+<<<<<<< HEAD
+    // Reject leading zeros on integers
+    if (parts[0].length > 1 && parts[0].startsWith("0") && !cleaned.startsWith("0.")) return;
     setAmount(cleaned);
+    setAmountError("");
+=======
+    setAmount(cleaned);
+>>>>>>> origin/main
   };
 
   const handleAmountBlur = () => {
@@ -44,12 +60,63 @@ export default function AddMoney() {
   };
 
   const handleDepositRequest = () => {
+<<<<<<< HEAD
+    setAmountError("");
+    const numAmount = parseFloat(amount);
+
+    if (!amount || amount.trim() === "") {
+      setAmountError("Amount is required");
+      return;
+    }
+    if (isNaN(numAmount) || !isFinite(numAmount)) {
+      setAmountError("Enter a valid amount");
+      return;
+    }
+    if (numAmount <= 0) {
+      setAmountError("Amount must be greater than zero");
+      return;
+    }
+    if (numAmount < 100) {
+      setAmountError("Minimum deposit amount is Rs. 100");
+      return;
+    }
+    if (numAmount > MAX_DEPOSIT_AMOUNT) {
+      setAmountError(`Maximum deposit amount is Rs. ${MAX_DEPOSIT_AMOUNT.toLocaleString()}`);
+      return;
+    }
+
+    // Check selected bank balance
+    const selectedBank = linkedBanks.find(b => b.bankId === selectedSource);
+    if (selectedBank && numAmount > selectedBank.balance) {
+      setAmountError(`Insufficient funds in ${selectedBank.name}`);
+      return;
+    }
+
+    if (submitting || loading) return;
+=======
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount < 100) return;
+>>>>>>> origin/main
     setIsScannerOpen(true);
   };
 
   const onScanVerified = async (palmImageBlob) => {
+<<<<<<< HEAD
+    if (submitting) return; // Prevent double-submit
+    setSubmitting(true);
+    try {
+      const numAmount = Math.round(parseFloat(amount) * 100) / 100;
+      const bank = linkedBanks.find(b => b.bankId === selectedSource);
+      const result = await addFunds(user.id, {
+        amount: numAmount,
+        bankId: selectedSource,
+        source: bank?.name || 'External Bank'
+      }, palmImageBlob);
+      if (result) setSuccess(true);
+    } finally {
+      setSubmitting(false);
+    }
+=======
     const numAmount = parseFloat(amount);
     const bank = linkedBanks.find(b => b.bankId === selectedSource);
     
@@ -60,6 +127,7 @@ export default function AddMoney() {
     }, palmImageBlob);
 
     if (result) setSuccess(true);
+>>>>>>> origin/main
   };
 
   return (
@@ -168,6 +236,23 @@ export default function AddMoney() {
               </div>
 
               <div className="pt-2">
+<<<<<<< HEAD
+                {amountError && (
+                  <div className="text-accent-red text-[12px] font-bold text-center mb-4 animate-in fade-in duration-200">
+                    {amountError}
+                  </div>
+                )}
+                <button
+                  onClick={handleDepositRequest}
+                  disabled={!amount || parseFloat(amount) < 100 || loading || submitting || !selectedSource}
+                  className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-2xl text-white text-[12px] font-bold tracking-[0.25em] shadow-xl shadow-accent-blue/20 active:scale-95 transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
+                >
+                  <div className="flex items-center gap-3">
+                    {(loading || submitting) ? <Loader2 className="animate-spin" size={20} /> : <Shield size={20} />} 
+                    <span>{(loading || submitting) ? "Adding funds..." : "Confirm Deposit"}</span>
+                  </div>
+                  {!loading && !submitting && parseFloat(amount) < 100 && (
+=======
                 <button
                   onClick={handleDepositRequest}
                   disabled={!amount || parseFloat(amount) < 100 || loading}
@@ -178,6 +263,7 @@ export default function AddMoney() {
                     <span>{loading ? "Adding funds..." : "Confirm Deposit"}</span>
                   </div>
                   {!loading && parseFloat(amount) < 100 && (
+>>>>>>> origin/main
                     <span className="text-[9px] opacity-60 normal-case tracking-normal">Minimum Deposit: Rs. 100</span>
                   )}
                 </button>
