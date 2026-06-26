@@ -4,6 +4,17 @@ A biometric-secured digital wallet application. Users authenticate transactions 
 
 ---
 
+## 🚀 Recent Enhancements
+
+- **Palm ID (@handle) System**: Every user now receives a unique Palm ID (e.g., `@alex_palm`). Users can search and send money using these handles instead of just phone numbers or email.
+- **Dynamic Recipient Discovery**: Optimized "matches-only" search interface. Recipient cards appear dynamically as you type (Name, @Palm ID, or Phone), reducing UI clutter.
+- **Production Hardening**: Implemented strict backend input validation (amount limits, ownership verification) and a defensive error-handling system.
+- **Real-Time Notification Core**: Enhanced Socket.IO integration to provide instant feedback for transactions, balance updates, and profile changes. Added a real-time unread notification count synchronization.
+- **Self-Transfer Protection**: Intelligent guards to prevent users from sending money to their own accounts, ensuring ledger integrity.
+- **Mobile-Responsive UI**: Complete redesign of the notification system and dashboard to be fully responsive for mobile devices.
+
+---
+
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
@@ -106,35 +117,20 @@ palmpay-wallet/
 │   ├── index.js                  # Server entry point
 │   ├── middleware/
 │   │   ├── authMiddleware.js     # Clerk JWT verification
-│   │   └── upload.js             # Multer file upload config
+│   │   └── upload.js             # Multer file upload config (size validation)
 │   ├── routes/
-│   │   ├── userRoutes.js
-│   │   ├── palmRoutes.js
-│   │   ├── transactionRoutes.js
-│   │   ├── walletRoutes.js
-│   │   └── notificationRoutes.js
 │   ├── controllers/
-│   │   ├── userController.js
-│   │   ├── palmController.js
-│   │   ├── transactionController.js
-│   │   ├── walletController.js
-│   │   └── notificationController.js
 │   ├── models/
-│   │   ├── User.js
-│   │   ├── Wallet.js
-│   │   ├── Transaction.js
-│   │   ├── BankAccount.js
-│   │   ├── Card.js
-│   │   └── Notification.js
-│   ├── realtime/
-│   │   ├── socketServer.js       # Socket.IO server initialization
-│   │   ├── socketAuth.js         # Socket authentication middleware
-│   │   ├── socketRooms.js        # Room name helpers
-│   │   ├── eventNames.js         # Shared event name constants
-│   │   ├── io.js                 # Shared io instance
-│   │   ├── emitters/             # Per-event emit helpers
-│   │   └── utils/
-│   └── scripts/                  # One-off utility scripts
+│   ├── utils/
+│   │   └── validators.js         # Strict input validation and sanitization
+│   └── realtime/
+│       ├── socketServer.js       # Socket.IO server initialization
+│       ├── socketAuth.js         # Socket authentication middleware (Clerk)
+│       ├── socketRooms.js        # Personal rooms per clerkId
+│       ├── eventNames.js         # Shared event name constants
+│       ├── io.js                 # Shared io instance
+│       ├── emitters/             # Per-feature event emit helpers
+│       └── utils/
 │
 └── backend/palm_auth/            # Python biometric microservice
     ├── main.py                   # FastAPI application
@@ -156,19 +152,19 @@ palmpay-wallet/
 | Server-state / caching | TanStack Query v5 |
 | Authentication | Clerk |
 
-| Real-time communication | Socket.IO |
+| Real-time communication | Socket.IO 4 |
 | API client | Axios |
 | QR code | html5-qrcode, qrcode.react |
 | Charts | Recharts |
 | PDF export | jsPDF + jspdf-autotable |
-| Node.js runtime | Express 5 + Socket.IO 4 |
+| Node.js runtime | Express 5 |
 | Database | MongoDB Atlas (Mongoose 9) |
 | Auth middleware | @clerk/clerk-sdk-node |
-| File uploads | Multer |
+| File uploads | Multer 1.4 (with memory storage) |
 | Biometric service | FastAPI + Uvicorn |
 | ML inference | PyTorch (TorchScript) |
 | Image processing | Pillow, torchvision |
-| Package manager | pnpm |
+| Package manager | pnpm 10 |
 
 ---
 
@@ -189,7 +185,7 @@ Each service has its own `.env` file. Example files are provided. Copy each one 
 
 ### Backend (`backend/.env`)
 
-```
+```bash
 cp backend/.env.example backend/.env
 ```
 
@@ -202,7 +198,7 @@ cp backend/.env.example backend/.env
 
 ### Frontend (`frontend/.env`)
 
-```
+```bash
 cp frontend/.env.example frontend/.env
 ```
 
@@ -309,61 +305,35 @@ python main.py
 
 The frontend is a single-page application built with React and Vite. It uses React Router v7 for client-side routing and Clerk for authentication UI components.
 
-**Key pages:**
+**Key features:**
 
-| Route | Page | Description |
-|---|---|---|
-| `/` | Dashboard | Wallet balance summary and swipeable asset carousel |
-| `/send` | Send | Palm-verified fund transfer to another user |
-| `/receive` | Receive | QR code generation for receiving funds |
-| `/wallet` | Wallet | Linked bank accounts and virtual card management |
-| `/transactions` | Transactions | Full transaction history with PDF export |
-| `/analytics` | Analytics | Spending charts and category breakdown |
-| `/notifications` | Notifications | Real-time notification feed |
-| `/security` | Security | Palm biometric enrollment and removal |
-| `/settings` | Settings | Profile, phone number, and preference settings |
-| `/add-card` | AddCard | Virtual card issuance via biometric authorization |
-| `/add-money` | AddMoney | Add funds to the wallet |
-
-The Zustand store manages global client state. TanStack Query handles all server-state caching and background refetching. Socket.IO client connects to the backend and receives real-time notifications.
+- **Palm ID Handle**: Integrated unique username system allowing users to identify each other via `@handle`.
+- **Match-Only Recipient Search**: A refined search experience that only displays recipient cards when a specific match for Name, Handle, or Phone is found.
+- **Stunning Real-Time UI**: High-fidelity dashboard with glassmorphism, swipeable asset carousels, and instant balance/notification updates via Sockets.
+- **Interactive Security**: Integrated palm enrollment workflow with real-time feedback and status checks.
 
 ### Node.js Backend
 
-The backend is an Express 5 server with Socket.IO attached to the same HTTP server instance. It connects to MongoDB Atlas using Mongoose.
+The backend is an Express 5 server with Socket.IO attached to the same HTTP server instance. It connects to MongoDB Atlas using Mongoose and uses a transactional approach for all fund transfers.
 
-**Middleware:**
+**Security Hardening:**
 
-- `requireAuth` — Verifies the Clerk Bearer token on every protected route. Attaches the decoded payload to `req.auth`.
-- `upload` — Multer middleware used by palm routes to accept image file uploads.
-
-**Protected route groups:**
-
-| Prefix | Auth required |
-|---|---|
-| `/api/users` | No |
-| `/api/palm` | No (auth handled internally per endpoint) |
-| `/api/transactions` | Yes |
-| `/api/wallet` | Yes |
-| `/api/notifications` | Yes |
-
-Socket.IO connections are also authenticated. The `socketAuthMiddleware` in `realtime/socketAuth.js` validates the Clerk token sent during the socket handshake and attaches `clerkId` to `socket.data`. Each connected user is placed into a private room identified by their Clerk user ID.
+- **Defensive Validation**: All inputs are sanitized and validated via `backend/utils/validators.js`.
+- **Self-Transfer Guard**: Prevents users from sending funds to their own account.
+- **Ownership Enforcement**: Clerk JWT `sub` is verified against requested `clerkId` on all sensitive operations.
+- **Transactional Integrity**: Mongoose sessions ensure that multi-step operations (e.g., deducting from sender, adding to receiver, credit journaling) are atomic.
 
 ### Palm Auth Service
 
-The Palm Auth service is a FastAPI application that handles biometric enrollment and verification. It loads a TorchScript model (`palm_embedder_scripted.pt`) to generate 128-dimensional palm embeddings from uploaded images. Embeddings are stored in the `palm_embeddings` collection in MongoDB Atlas.
+The Palm Auth service is a FastAPI application that handles biometric enrollment and verification using a TorchScript model (`palm_embedder_scripted.pt`).
 
 **Inference configuration** (`palm_config.json`):
 
-| Key | Default | Description |
-|---|---|---|
-| `threshold` | `0.82` | Minimum cosine similarity to accept a verification attempt |
-| `embed_dim` | `128` | Output dimension of the embedding model |
-| `img_size` | `128` | Input image size (pixels) |
-| `normalize.mean` | `[0.5]` | Normalization mean for grayscale input |
-| `normalize.std` | `[0.5]` | Normalization standard deviation |
-| `eer_percent` | `1.52` | Equal error rate achieved during training |
+- **Threshold**: `0.82` (minimum cosine similarity for verification)
+- **Embed Dim**: `128` (output dimension)
+- **Img Size**: `128x128` (input resolution)
 
-The service accepts a single palm image per enrollment call and replaces any existing embedding for that user. Verification computes the cosine similarity between the probe embedding and the stored embedding and returns `accepted: true` if the similarity meets or exceeds the threshold.
+Verification returns `accepted: true` only if the probe image's similarity to the enrolled embedding exceeds the threshold.
 
 ---
 
@@ -373,57 +343,33 @@ The service accepts a single palm image per enrollment call and replaces any exi
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/users/sync` | No | Create or update a user record from Clerk data |
-| GET | `/api/users/:clerkId` | No | Retrieve a user profile by Clerk ID |
+| POST | `/api/users/sync` | No | Create/Update user from Clerk data |
+| GET | `/api/users/:clerkId` | No | Retrieve user profile (includes Palm ID, balance, banks) |
+| POST | `/api/users/update` | Yes | Update profile details (Name, Phone, Palm ID) |
 
 ### Palm Biometrics — `/api/palm`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/palm/enroll` | Clerk token | Upload a palm image and store the embedding |
-| POST | `/api/palm/verify` | Clerk token | Verify a palm image against the stored embedding |
-| DELETE | `/api/palm/unenroll` | Clerk token | Remove all palm data for the authenticated user |
-| GET | `/api/palm/status` | Clerk token | Check whether the user has an enrolled palm |
+| POST | `/api/palm/enroll` | Yes | Upload palm image and store embedding |
+| POST | `/api/palm/verify` | Yes | Verify palm image against stored embedding |
+| DELETE | `/api/palm/unenroll` | Yes | Remove all biometric data |
 
 ### Transactions — `/api/transactions`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/transactions` | Yes | Create a new transaction (requires palm verification) |
-| GET | `/api/transactions` | Yes | List all transactions for the authenticated user |
-| GET | `/api/transactions/:id` | Yes | Get a single transaction by ID |
+| POST | `/api/transactions` | Yes | Create a new P2P transfer (requires palm scan) |
+| GET | `/api/transactions` | Yes | List transaction history |
+| GET | `/api/transactions/categories` | Yes | List unique transaction categories used |
 
 ### Wallet — `/api/wallet`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/wallet` | Yes | Get the wallet balance and details |
-| POST | `/api/wallet/add-money` | Yes | Add funds to the wallet balance |
-| GET | `/api/wallet/bank-accounts` | Yes | List linked bank accounts |
+| GET | `/api/wallet` | Yes | Get wallet balance and linked assets |
+| POST | `/api/wallet/add-money` | Yes | Fund wallet from linked bank (requires palm scan) |
 | POST | `/api/wallet/bank-accounts` | Yes | Link a new bank account |
-| DELETE | `/api/wallet/bank-accounts/:id` | Yes | Remove a linked bank account |
-| GET | `/api/wallet/cards` | Yes | List virtual cards |
-| POST | `/api/wallet/cards` | Yes | Issue a new virtual card |
-| DELETE | `/api/wallet/cards/:id` | Yes | Remove a virtual card |
-
-### Notifications — `/api/notifications`
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/notifications` | Yes | List all notifications for the authenticated user |
-| PATCH | `/api/notifications/:id/read` | Yes | Mark a notification as read |
-| PATCH | `/api/notifications/read-all` | Yes | Mark all notifications as read |
-
-### Palm Auth Microservice — direct (port 8000)
-
-These endpoints are called by the Node.js backend, not directly by the browser.
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/enroll/{user_id}` | Enroll a palm embedding for a user |
-| POST | `/verify/{user_id}` | Verify a palm image against the stored embedding |
-| DELETE | `/unenroll/{user_id}` | Remove all palm data for a user |
-| GET | `/config` | Return the current inference configuration |
 
 ---
 
@@ -433,84 +379,49 @@ These endpoints are called by the Node.js backend, not directly by the browser.
 
 | Field | Type | Description |
 |---|---|---|
-| `clerkId` | String | Primary identifier from Clerk |
-| `email` | String | User email address |
-| `firstName` | String | First name |
-| `lastName` | String | Last name |
-| `phone` | String | Phone number |
-| `imageUrl` | String | Profile image URL |
+| `clerkId` | String | Primary identifier from Clerk (Unique) |
+| `username` | String | Unique Palm ID (@handle) |
+| `name` | String | User's full name |
+| `phone` | String | Verified phone number |
+| `palmEnrolled`| Boolean | Biometric enrollment status |
+| `kycStatus` | String | `pending`, `verified`, `rejected` |
 
 ### Wallet
 
 | Field | Type | Description |
 |---|---|---|
 | `userId` | String | Reference to User `clerkId` |
-| `balance` | Number | Current balance in the default currency |
+| `balance` | Number | Current balance (default 25,000 for new users) |
 
 ### Transaction
 
 | Field | Type | Description |
 |---|---|---|
-| `senderId` | String | Clerk ID of the sender |
-| `receiverId` | String | Clerk ID of the receiver |
-| `amount` | Number | Transaction amount |
-| `type` | String | `send`, `receive`, or `topup` |
-| `status` | String | `pending`, `completed`, or `failed` |
-| `note` | String | Optional transaction note |
-| `createdAt` | Date | Timestamp |
-
-### BankAccount
-
-| Field | Type | Description |
-|---|---|---|
-| `userId` | String | Reference to User `clerkId` |
-| `bankName` | String | Name of the bank |
-| `accountNumber` | String | Account number |
-| `accountType` | String | Account type |
-
-### Card
-
-| Field | Type | Description |
-|---|---|---|
-| `userId` | String | Reference to User `clerkId` |
-| `cardNumber` | String | Masked card number |
-| `cardHolder` | String | Cardholder name |
-| `expiryDate` | String | Expiry in MM/YY format |
-| `type` | String | `virtual` |
-
-### Notification
-
-| Field | Type | Description |
-|---|---|---|
-| `userId` | String | Reference to User `clerkId` |
-| `title` | String | Notification title |
-| `message` | String | Notification body |
-| `type` | String | Notification category |
-| `read` | Boolean | Whether the user has read the notification |
-| `createdAt` | Date | Timestamp |
+| `userId` | String | Owner of the transaction record |
+| `sender` | String | Name of the sender |
+| `recipient` | String | Name of the recipient |
+| `amount` | Number | Amount (Negative for debits) |
+| `type` | String | `transfer`, `deposit`, `credit` |
+| `category` | String | Transaction category |
 
 ---
 
 ## Real-Time Events
 
-The backend emits Socket.IO events to user-specific rooms. The room name for a user is derived from their Clerk ID. The frontend subscribes to these events on connection.
-
 | Event name | Payload | Description |
 |---|---|---|
-| `emitNotificationNew` | Notification object | A new notification has been created for the user |
-| `emitBalanceUpdate` | `{ balance }` | The user's wallet balance has changed |
-| `emitTransactionNew` | Transaction object | A new transaction has been recorded for the user |
-
-Event name constants are defined in `backend/realtime/eventNames.js` and imported wherever events are emitted or consumed to prevent typos.
+| `emitNotificationNew` | Notification object | New notification created (Real-time toast/feed) |
+| `emitBalanceUpdate` | `{ balance }` | Wallet balance changed |
+| `emitTransactionNew` | Transaction object | New transaction recorded |
+| `emitUnreadCountUpdated`| `{ unreadCount }` | Updated badge count for notifications |
 
 ---
 
 ## Authentication Flow
 
-1. The user signs in through the Clerk-hosted UI rendered in the React app.
-2. Clerk issues a short-lived JWT session token stored client-side.
-3. The React app attaches the token as a `Bearer` header on every API request via Axios.
-4. The `requireAuth` middleware on the Express server calls `clerkClient.verifyToken(token)` to validate the JWT.
-5. On success, `req.auth` is populated with the decoded payload (includes `sub`, which is the Clerk user ID).
-6. For WebSocket connections, the same token is sent in the handshake `auth` object and validated by `socketAuthMiddleware` before the connection is accepted.
-7. For palm-verified actions (e.g., sending funds), the frontend captures a palm image and sends it to the backend, which forwards it to the Palm Auth microservice. The transaction proceeds only if `accepted: true` is returned.
+1. **Sign-In**: User authenticates via Clerk UI in the React app.
+2. **Session**: Clerk issues a JWT session token stored client-side.
+3. **Authorization**: React app sends the token as a `Bearer` header on all API calls.
+4. **Verification**: Backend `requireAuth` middleware validates the JWT via Clerk SDK.
+5. **WebSocket Auth**: Handshake `auth` contains the token, validated by `socketAuthMiddleware`.
+6. **Palm Verification**: For critical actions (transfers, additions), the user must provide a palm scan. The backend forwards the image to the Palm Auth service and proceeds only if `accepted: true`.
