@@ -8,7 +8,10 @@ import QRScannerModal from "../components/ui/QRScannerModal";
 import { normalizePhone } from "../components/ui/PhoneLinkModal";
 
 const QUICK_AMOUNTS = [200, 500, 1000, 5000];
+<<<<<<< HEAD
 const MAX_SEND_AMOUNT = 10_000_000;
+=======
+>>>>>>> origin/main
 
 export default function Send() {
   const { user } = useUser();
@@ -21,8 +24,11 @@ export default function Send() {
   const [success, setSuccess] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+<<<<<<< HEAD
   const [amountError, setAmountError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+=======
+>>>>>>> origin/main
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -50,6 +56,7 @@ export default function Send() {
     }
   }, [users, user, selectedContact, success]);
 
+<<<<<<< HEAD
   const validateAndSend = () => {
     setAmountError("");
     const n = parseFloat(amount);
@@ -87,29 +94,45 @@ export default function Send() {
       return;
     }
     if (submitting || loading) return;
+=======
+  const handleSendRequest = () => {
+    const n = parseFloat(amount);
+    if (!n || n < 100 || n > balance) return;
+>>>>>>> origin/main
     setIsScannerOpen(true);
   };
 
   const handleAmountChange = (val) => {
+<<<<<<< HEAD
     // Only allow digits and a single decimal point
+=======
+>>>>>>> origin/main
     const cleaned = val.replace(/[^0-9.]/g, "");
     const parts = cleaned.split(".");
     if (parts.length > 2) return;
     if (parts[1] && parts[1].length > 2) return;
+<<<<<<< HEAD
     // Reject leading zeros on integers (e.g. "00", "007")
     if (parts[0].length > 1 && parts[0].startsWith("0") && !cleaned.startsWith("0.")) return;
     setAmount(cleaned);
     setAmountError("");
+=======
+    setAmount(cleaned);
+>>>>>>> origin/main
   };
 
   const handleAmountBlur = () => {
     const num = parseFloat(amount);
+<<<<<<< HEAD
     if (isNaN(num) || num <= 0) {
       setAmount("100.00");
       setAmountError("");
     } else {
       setAmount(num.toFixed(2));
     }
+=======
+    setAmount(!isNaN(num) ? num.toFixed(2) : "100.00");
+>>>>>>> origin/main
   };
 
   const getInitials = (name) => {
@@ -118,6 +141,7 @@ export default function Send() {
   };
 
   const onScanVerified = async (palmImageBlob) => {
+<<<<<<< HEAD
     if (submitting) return; // Prevent double-submit
     setSubmitting(true);
     try {
@@ -136,6 +160,20 @@ export default function Send() {
     } finally {
       setSubmitting(false);
     }
+=======
+    const numAmount = parseFloat(amount);
+    const recipient = (users || []).find(u => u.clerkId === selectedContact);
+    const bank = linkedBanks.find(b => b.id === selectedBank);
+    const result = await sendMoney(user.id, {
+      recipientId: selectedContact,
+      bankId: selectedBank,
+      recipient: selectedBank ? (bank?.name || "Bank") : (recipient?.name || "Unknown"),
+      amount: numAmount,
+      description,
+      category: selectedBank ? "Withdrawal" : "Transfer",
+    }, palmImageBlob);
+    if (result) setSuccess(true);
+>>>>>>> origin/main
   };
 
   return (
@@ -443,6 +481,7 @@ export default function Send() {
                 />
               </div>
 
+<<<<<<< HEAD
               {/* ── Validation Error Message ──────────────────── */}
               {amountError && (
                 <div className="text-accent-red text-[12px] font-bold text-center -mt-3 animate-in fade-in duration-200">
@@ -468,15 +507,31 @@ export default function Send() {
                   <span>{(loading || submitting) ? "Processing..." : "Send Payment"}</span>
                 </div>
                 {!loading && !submitting && parseFloat(amount) < 100 && (
+=======
+              {/* ── Send Button ──────────────────────────────────── */}
+              <button
+                onClick={handleSendRequest}
+                disabled={!amount || parseFloat(amount) < 100 || loading}
+                className="w-full py-5 bg-accent-blue hover:brightness-110 rounded-2xl text-white text-[12px] font-bold tracking-[0.25em] shadow-xl shadow-accent-blue/20 active:scale-95 transition-all disabled:opacity-20 flex flex-col items-center justify-center gap-1 font-heading uppercase"
+              >
+                <div className="flex items-center gap-3">
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : <Shield size={20} />}
+                  <span>{loading ? "Processing..." : "Send Payment"}</span>
+                </div>
+                {!loading && parseFloat(amount) < 100 && (
+>>>>>>> origin/main
                   <span className="text-[9px] opacity-60 normal-case tracking-normal">
                     Minimum Transfer: Rs. 100
                   </span>
                 )}
+<<<<<<< HEAD
                 {!loading && !submitting && typeof balance === "number" && parseFloat(amount) > balance && parseFloat(amount) >= 100 && (
                   <span className="text-[9px] opacity-60 normal-case tracking-normal">
                     Exceeds wallet balance
                   </span>
                 )}
+=======
+>>>>>>> origin/main
               </button>
 
             </div>

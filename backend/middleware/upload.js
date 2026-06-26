@@ -1,5 +1,6 @@
 const multer = require('multer');
 
+<<<<<<< HEAD
 // ─── File size and type limits for palm images ─────────────────────────────────
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -43,5 +44,8 @@ upload.handleError = (err, req, res, next) => {
     }
     next();
 };
+=======
+const upload = multer({ storage: multer.memoryStorage() });
+>>>>>>> origin/main
 
 module.exports = upload;

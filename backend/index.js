@@ -36,7 +36,10 @@ app.get('/', (_, res) => res.json({ status: 'ok', service: 'PalmPay API' }));
 
 // Auth
 const { requireAuth } = require('./middleware/authMiddleware');
+<<<<<<< HEAD
 const upload          = require('./middleware/upload');
+=======
+>>>>>>> origin/main
 
 // API
 app.use('/api/users',         userRoutes);
@@ -48,6 +51,7 @@ app.use('/api/notifications', requireAuth, notificationRoutes);
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 
+<<<<<<< HEAD
 // Multer-specific error handler (must come before the generic one)
 app.use((err, req, res, next) => {
     const multer = require('multer');
@@ -71,6 +75,12 @@ app.use((err, req, res, next) => {
         ? 'Internal server error'
         : (err.message || 'Internal server error');
     res.status(status).json({ error: message });
+=======
+// Error
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+>>>>>>> origin/main
 });
 
 server.listen(PORT, () => console.log(`🚀  PalmPay API running on port ${PORT}`));

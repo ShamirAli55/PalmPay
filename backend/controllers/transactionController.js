@@ -8,7 +8,10 @@ const Notification = require('../models/Notification');
 const { emitWalletBalanceUpdated } = require('../realtime/emitters/walletEmitter');
 const { emitTransactionCreated } = require('../realtime/emitters/transactionEmitter');
 const { emitNotificationNew, emitUnreadCountUpdated } = require('../realtime/emitters/notificationEmitter');
+<<<<<<< HEAD
 const { validateAmount, validateClerkId, validateObjectId, sanitizeText } = require('../utils/validators');
+=======
+>>>>>>> origin/main
 
 // Unread count helper
 const getUnreadCount = async (clerkId) => {
@@ -23,7 +26,10 @@ async function verifyPalmBiometric(clerkId, fileBuffer) {
     form.append('file', fileBuffer, { filename: 'verify.jpg' });
     const resp = await axios.post(`${PALM_AUTH_URL}/verify/${clerkId}`, form, {
         headers: form.getHeaders(),
+<<<<<<< HEAD
         timeout: 15000, // Prevent hanging requests
+=======
+>>>>>>> origin/main
     });
     return resp.data;
 }
@@ -32,6 +38,7 @@ async function verifyPalmBiometric(clerkId, fileBuffer) {
 exports.getTransactions = async (req, res) => {
     try {
         const { clerkId } = req.params;
+<<<<<<< HEAD
 
         // Validate clerkId ownership against authenticated session
         const authId = req.auth?.sub;
@@ -48,6 +55,12 @@ exports.getTransactions = async (req, res) => {
     } catch (err) {
         console.error('getTransactions error:', err);
         res.status(500).json({ error: 'Failed to retrieve transactions' });
+=======
+        const transactions = await Transaction.find({ userId: clerkId }).sort({ date: -1 });
+        res.json(transactions);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+>>>>>>> origin/main
     }
 };
 
@@ -60,13 +73,17 @@ exports.createTransaction = async (req, res) => {
     try {
         const { clerkId, recipientId, bankId, recipient, amount, category, description } = req.body;
 
+<<<<<<< HEAD
         // ── 1. Validate palm image ─────────────────────────────────────────
+=======
+>>>>>>> origin/main
         if (!req.file) {
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({ message: 'Palm authentication required' });
         }
 
+<<<<<<< HEAD
         // Reject suspicious file sizes (too small = tampered, too large = attack)
         if (req.file.size < 1000) {
             await session.abortTransaction();
@@ -135,11 +152,16 @@ exports.createTransaction = async (req, res) => {
         }
 
         if (!palmResp || !palmResp.accepted) {
+=======
+        const palmResp = await verifyPalmBiometric(clerkId, req.file.buffer);
+        if (!palmResp.accepted) {
+>>>>>>> origin/main
             await session.abortTransaction();
             session.endSession();
             return res.status(401).json({ message: 'Palm authentication failed' });
         }
 
+<<<<<<< HEAD
         // ── 8. Load sender resources ──────────────────────────────────────
         const senderWallet = await Wallet.findOne({ userId: clerkIdValidation.value }).session(session);
         const senderUser = await User.findOne({ clerkId: clerkIdValidation.value }).session(session);
@@ -193,12 +215,40 @@ exports.createTransaction = async (req, res) => {
 
             txOut = new Transaction({
                 userId: clerkIdValidation.value,
+=======
+        const amtNum = Math.abs(parseFloat(amount));
+
+        // Use session in all finds/saves
+        const senderWallet = await Wallet.findOne({ userId: clerkId }).session(session);
+        const senderUser = await User.findOne({ clerkId }).session(session);
+
+        if (!senderWallet || !senderUser) throw new Error('Sender wallet or user not found');
+        if (senderWallet.balance < amtNum) throw new Error('Insufficient balance');
+
+        // Deduct from sender
+        senderWallet.balance -= amtNum;
+        await senderWallet.save({ session });
+
+        let txOut;
+
+        if (bankId) {
+            // TRANSFER TO BANK (WITHDRAWAL)
+            const bank = await BankAccount.findById(bankId).session(session);
+            if (!bank) throw new Error('Target bank account not found');
+
+            bank.balance += amtNum;
+            await bank.save({ session });
+
+            txOut = new Transaction({
+                userId: clerkId,
+>>>>>>> origin/main
                 sender: 'My Wallet',
                 recipient: bank.bankName,
                 amount: -amtNum,
                 category: 'Bank Transfer',
                 type: 'transfer',
                 paymentMethod: { type: 'bank', id: bankId },
+<<<<<<< HEAD
                 description: sanitizeText(description) || `Transfer to ${bank.bankName}`,
             });
         } else {
@@ -221,11 +271,33 @@ exports.createTransaction = async (req, res) => {
                 type: 'transfer',
                 paymentMethod: { type: 'wallet' },
                 description: sanitizeText(description),
+=======
+                description: description || `Transfer to ${bank.bankName}`,
+            });
+        } else {
+            // P2P TRANSFER
+            const recipientWallet = await Wallet.findOne({ userId: recipientId }).session(session);
+            const recipientUser = await User.findOne({ clerkId: recipientId }).session(session);
+
+            txOut = new Transaction({
+                userId: clerkId,
+                sender: senderUser.name || 'Me',
+                recipient: recipient || recipientUser?.name || 'External Recipient',
+                amount: -amtNum,
+                category: category || 'Transfer',
+                type: 'transfer',
+                paymentMethod: { type: 'wallet' },
+                description,
+>>>>>>> origin/main
             });
 
             // Credit recipient if on-platform
             if (recipientWallet) {
+<<<<<<< HEAD
                 recipientWallet.balance = Math.round((recipientWallet.balance + amtNum) * 100) / 100;
+=======
+                recipientWallet.balance += amtNum;
+>>>>>>> origin/main
                 await recipientWallet.save({ session });
 
                 const txIn = new Transaction({
@@ -233,7 +305,11 @@ exports.createTransaction = async (req, res) => {
                     sender: senderUser.name || 'External Sender',
                     recipient: recipientUser?.name || 'Me',
                     amount: amtNum,
+<<<<<<< HEAD
                     category: sanitizeText(category, 50) || 'Transfer',
+=======
+                    category: category || 'Transfer',
+>>>>>>> origin/main
                     type: 'credit',
                     paymentMethod: { type: 'wallet' },
                     description: `Received from ${senderUser.name || 'User'}`,
@@ -244,6 +320,7 @@ exports.createTransaction = async (req, res) => {
 
         await txOut.save({ session });
 
+<<<<<<< HEAD
         // ── Commit transaction ────────────────────────────────────────────
         await session.commitTransaction();
         session.endSession();
@@ -262,6 +339,28 @@ exports.createTransaction = async (req, res) => {
             emitNotificationNew({ clerkId: clerkIdValidation.value, notification: notifSender });
             getUnreadCount(clerkIdValidation.value).then(count => emitUnreadCountUpdated({ clerkId: clerkIdValidation.value, unreadCount: count }));
 
+=======
+        // Finalize transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        // System Post-Journaling (Create notifications asynchronously outside transaction for speed)
+        try {
+            // Notification for Sender
+            const notifSender = await new Notification({
+                userId: clerkId,
+                title: 'Payment Sent',
+                message: `Rs. ${amtNum.toLocaleString()} sent to ${recipient || recipientUser?.name || 'Recipient'}.`,
+                type: 'transaction'
+            }).save();
+
+            emitWalletBalanceUpdated({ clerkId, wallet: senderWallet, reason: 'SEND', transactionId: txOut._id });
+            emitTransactionCreated({ clerkId, transaction: txOut });
+            emitNotificationNew({ clerkId, notification: notifSender });
+            getUnreadCount(clerkId).then(count => emitUnreadCountUpdated({ clerkId, unreadCount: count }));
+
+            // Notification for Receiver
+>>>>>>> origin/main
             if (recipientWallet) {
                 const notifReceiver = await new Notification({
                     userId: recipientId,
@@ -271,7 +370,13 @@ exports.createTransaction = async (req, res) => {
                 }).save();
 
                 emitWalletBalanceUpdated({ clerkId: recipientId, wallet: recipientWallet, reason: 'RECEIVE', transactionId: txOut._id });
+<<<<<<< HEAD
                 const txIn = await Transaction.findOne({ userId: recipientId }).sort({ _id: -1 });
+=======
+                // We need the transaction view for the receiver too
+                // For receiver, the transaction object should be their view (credit)
+                const txIn = await Transaction.findOne({ userId: recipientId, reference: txOut.reference });
+>>>>>>> origin/main
                 if (txIn) emitTransactionCreated({ clerkId: recipientId, transaction: txIn });
 
                 emitNotificationNew({ clerkId: recipientId, notification: notifReceiver });
@@ -288,6 +393,7 @@ exports.createTransaction = async (req, res) => {
         });
 
     } catch (err) {
+<<<<<<< HEAD
         console.error('createTransaction failed, rolling back:', err);
         try {
             await session.abortTransaction();
@@ -304,10 +410,24 @@ exports.createTransaction = async (req, res) => {
 };
 
 // ─── POST /api/transactions/add-funds ────────────────────────────────────────
+=======
+        console.error('createTransaction transaction failed, rolling back:', err);
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({
+            error: 'Transaction failed',
+            message: err.message === 'Insufficient balance' ? 'Insufficient balance' : 'Security or connection error'
+        });
+    }
+};
+
+// ─── POST /api/wallet/add-funds ──────────────────────────────────────────────
+>>>>>>> origin/main
 exports.addFunds = async (req, res) => {
     try {
         const { clerkId, bankId, amount, source } = req.body;
 
+<<<<<<< HEAD
         // ── 1. Palm authentication ─────────────────────────────────────────
         if (!req.file) return res.status(400).json({ message: 'Palm authentication required' });
 
@@ -383,11 +503,44 @@ exports.addFunds = async (req, res) => {
         const tx = new Transaction({
             userId: clerkIdValidation.value,
             sender: sanitizeText(source, 100) || 'Bank Deposit',
+=======
+        if (!req.file) return res.status(400).json({ message: 'Palm authentication required' });
+
+        const palmResp = await verifyPalmBiometric(clerkId, req.file.buffer);
+        if (!palmResp.accepted) {
+            return res.status(401).json({ message: 'Palm authentication failed' });
+        }
+
+        const [user, wallet] = await Promise.all([
+            User.findOne({ clerkId }),
+            Wallet.findOne({ userId: clerkId }),
+        ]);
+        if (!user || !wallet) return res.status(404).json({ message: 'User or Wallet not found' });
+
+        const amtNum = Math.abs(parseFloat(amount));
+
+        // Deduct from the source bank account
+        if (bankId) {
+            const bank = await BankAccount.findById(bankId);
+            if (bank) {
+                if (bank.balance < amtNum) {
+                    return res.status(400).json({ message: `Insufficient funds in ${bank.bankName}` });
+                }
+                bank.balance -= amtNum;
+                await bank.save();
+            }
+        }
+
+        const tx = new Transaction({
+            userId: clerkId,
+            sender: source || 'Bank Deposit',
+>>>>>>> origin/main
             recipient: user.name || 'My Wallet',
             amount: amtNum,
             category: 'Deposit',
             type: 'deposit',
             paymentMethod: { type: 'bank', id: bankId },
+<<<<<<< HEAD
             description: `Deposit from ${sanitizeText(source, 100) || 'external bank'}`,
         });
         wallet.balance = Math.round((wallet.balance + amtNum) * 100) / 100;
@@ -406,11 +559,35 @@ exports.addFunds = async (req, res) => {
             emitTransactionCreated({ clerkId: clerkIdValidation.value, transaction: tx });
             emitNotificationNew({ clerkId: clerkIdValidation.value, notification: notif });
             getUnreadCount(clerkIdValidation.value).then(count => emitUnreadCountUpdated({ clerkId: clerkIdValidation.value, unreadCount: count }));
+=======
+            description: `Deposit from ${source || 'external bank'}`,
+        });
+        wallet.balance += amtNum;
+        await Promise.all([wallet.save(), tx.save()]);
+
+        // Journal the deposit
+        try {
+            const notif = await new Notification({
+                userId: clerkId,
+                title: 'Funds Added',
+                message: `Rs. ${amtNum.toLocaleString()} added to wallet from ${source || 'Source'}.`,
+                type: 'transaction'
+            }).save();
+
+            emitWalletBalanceUpdated({ clerkId, wallet, reason: 'DEPOSIT', transactionId: tx._id });
+            emitTransactionCreated({ clerkId, transaction: tx });
+            emitNotificationNew({ clerkId, notification: notif });
+            getUnreadCount(clerkId).then(count => emitUnreadCountUpdated({ clerkId, unreadCount: count }));
+>>>>>>> origin/main
         } catch (notifErr) {
             console.error('Deposit Notification/Realtime Error:', notifErr);
         }
 
+<<<<<<< HEAD
         const banks = await BankAccount.find({ userId: clerkIdValidation.value });
+=======
+        const banks = await BankAccount.find({ userId: clerkId });
+>>>>>>> origin/main
 
         res.json({
             message: 'Funds added successfully',
@@ -434,6 +611,7 @@ exports.addFunds = async (req, res) => {
 exports.getCategories = async (req, res) => {
     try {
         const { clerkId } = req.params;
+<<<<<<< HEAD
 
         if (!clerkId || typeof clerkId !== 'string' || clerkId.trim() === '') {
             return res.status(400).json({ error: 'Invalid user ID' });
@@ -447,5 +625,17 @@ exports.getCategories = async (req, res) => {
     } catch (err) {
         console.error('getCategories error:', err);
         res.status(500).json({ error: 'Failed to retrieve categories' });
+=======
+        // Find unique categories for this user. 
+        // We include a default set to ensure the UI has something if no transactions exist.
+        const defaultCategories = ["Transfer", "Shopping", "Income", "Software", "Technology", "Salary", "Utils", "Food", "Deposit"];
+        const userCategories = await Transaction.distinct('category', { userId: clerkId });
+        
+        // Merge and remove duplicates, filter out falsy values
+        const merged = [...new Set([...defaultCategories, ...userCategories])].filter(Boolean);
+        res.json(merged);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+>>>>>>> origin/main
     }
 };
