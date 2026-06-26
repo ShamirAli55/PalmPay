@@ -32,7 +32,6 @@ THRESHOLD   = cfg["threshold"]        # default 0.82
 IMG_SIZE    = cfg["img_size"]         # default 128
 MAX_SAMPLES = cfg.get("max_samples", 5)  # how many enrollment images to average
 # Use environment variable for MongoDB URI if available
-
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/palmpay_wallet")
 
 # ── MongoDB ──────────────────────────────────────────────────────────────────
