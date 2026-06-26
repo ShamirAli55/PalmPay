@@ -1,18 +1,10 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Wallet,
-  List,
-  BarChart2,
-  Settings,
-  HelpCircle,
-  LogOut,
-  Smartphone,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, Wallet, List, BarChart2, Settings, HelpCircle, LogOut, X, Phone } from "lucide-react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { useWalletStore } from "../store/walletStore";
 import { motion, AnimatePresence } from "framer-motion";
+import PhoneLinkModal from "./ui/PhoneLinkModal";
 
 const ICON_MAP = {
   "layout-dashboard": LayoutDashboard,
@@ -23,11 +15,11 @@ const ICON_MAP = {
 };
 
 const NAV_ITEMS = [
-  { label: "Dashboard", path: "/dashboard", icon: "layout-dashboard" },
-  { label: "Wallet", path: "/wallet", icon: "wallet" },
-  { label: "Transactions", path: "/transactions", icon: "list" },
-  { label: "Analytics", path: "/analytics", icon: "bar-chart-2" },
-  { label: "Settings", path: "/settings", icon: "settings" },
+  { label: "Dashboard",    path: "/dashboard",    icon: "layout-dashboard" },
+  { label: "Wallet",       path: "/wallet",        icon: "wallet" },
+  { label: "Transactions", path: "/transactions",  icon: "list" },
+  { label: "Analytics",    path: "/analytics",     icon: "bar-chart-2" },
+  { label: "Settings",     path: "/settings",      icon: "settings" },
 ];
 
 function NavItem({ item, onClick }) {
@@ -50,21 +42,21 @@ function NavItem({ item, onClick }) {
 }
 
 export default function Sidebar() {
-  const { user } = useUser();
+  const { user }   = useUser();
   const { signOut } = useClerk();
-  const navigate = useNavigate();
-  const { isSidebarOpen, closeSidebar } = useWalletStore();
+  const navigate   = useNavigate();
+  const { isSidebarOpen, closeSidebar, user: dbUser } = useWalletStore();
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
 
   const handleLogout = () => signOut(() => navigate("/login"));
+  const displayPhone = dbUser?.phone;
 
   return (
     <>
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={closeSidebar}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           />
@@ -76,22 +68,59 @@ export default function Sidebar() {
         lg:translate-x-0 lg:static lg:h-screen lg:flex
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        {/* Logo Section */}
-        <div className="p-7 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-[38px] h-[38px] rounded-xl border border-accent-blue/30 bg-accent-blue/10 flex items-center justify-center shrink-0 text-accent-blue">
-              <Smartphone size={20} />
+        {/* ── Identity Header ──────────────────────────────── */}
+        <div className="px-6 py-8 pb-6 border-b border-white/5 bg-text-primary/[0.02]">
+          {user && (
+            <div className="space-y-5">
+              {/* Header: Avatar | Name+ID */}
+              <div className="flex items-center gap-4">
+                <div className="relative shrink-0">
+                  <img
+                    src={user.imageUrl}
+                    alt={user.fullName}
+                    className="w-[58px] h-[58px] rounded-2xl object-cover shadow-2xl shadow-black/40 border-2 border-white/5"
+                  />
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-accent-green border-[3px] border-bg-main rounded-full" />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="text-[17px] font-black text-text-primary leading-tight font-heading tracking-tight uppercase truncate">
+                    {dbUser?.name || user.fullName}
+                  </div>
+                  <div className="text-[11px] font-bold text-accent-blue tracking-[0.1em] uppercase mt-0.5 truncate">
+                    @{dbUser?.username || user.username || user.firstName?.toLowerCase() || 'palm.user'}
+                  </div>
+                </div>
+
+                <button onClick={closeSidebar} className="lg:hidden p-2 text-text-secondary hover:text-text-primary transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Identity Token: Phone Number */}
+              <div className="pt-1">
+                {displayPhone ? (
+                  <div className="flex items-center gap-2.5 px-3 py-2 bg-text-primary/5 rounded-xl border border-white/5 shadow-inner">
+                    <Phone size={11} className="text-accent-blue/60 shrink-0" />
+                    <span className="text-[12px] font-black text-text-primary/80 tracking-widest font-mono">
+                      {displayPhone}
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPhoneModalOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-accent-blue/5 border border-accent-blue/20 rounded-xl text-[10px] font-black text-accent-blue hover:bg-accent-blue/10 transition-all uppercase tracking-widest"
+                  >
+                    <Phone size={10} />
+                    Link Mobile Number
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="font-extrabold text-[20px] text-text-primary leading-none font-heading tracking-tight whitespace-nowrap">
-              Digital Palm
-            </div>
-          </div>
-          <button onClick={closeSidebar} className="lg:hidden p-2 text-text-secondary hover:text-text-primary">
-            <X size={22} />
-          </button>
+          )}
         </div>
 
-        {/* Nav list starts directly */}
+        {/* ── Nav ──────────────────────────────────────────── */}
         <nav className="flex-1 px-6 mt-4 overflow-y-auto">
           {NAV_ITEMS.map((item) => (
             <NavItem key={item.path} item={item} onClick={closeSidebar} />
@@ -112,25 +141,16 @@ export default function Sidebar() {
             Logout
           </button>
         </nav>
-
-        {/* User Footer Profile */}
-        {user && (
-          <div className="p-6 border-t border-border-main flex items-center gap-3.5 bg-text-primary/2">
-            <div className="relative shrink-0">
-              <img
-                src={user.imageUrl}
-                alt={user.fullName}
-                className="w-10 h-10 rounded-lg object-cover border border-border-main"
-              />
-            </div>
-            <div className="overflow-hidden">
-              <div className="text-[14px] font-black text-text-primary truncate font-heading tracking-tight leading-none uppercase">
-                {user.firstName || user.username}
-              </div>
-            </div>
-          </div>
-        )}
       </aside>
+
+      {/* Phone Link Modal */}
+      {phoneModalOpen && (
+        <PhoneLinkModal
+          isOpen={phoneModalOpen}
+          onClose={() => setPhoneModalOpen(false)}
+          onSuccess={() => setPhoneModalOpen(false)}
+        />
+      )}
     </>
   );
 }

@@ -31,7 +31,7 @@ import { useWalletStore } from "../store/walletStore";
 import { usePalmStore } from "../store/palmStore";
 
 // Stats
-function StatCard({ card }) {
+function StatCard({ card, palmEnrolled }) {
   const icons = {
     "trending-up": TrendingUp,
     "credit-card": CreditCard,
@@ -40,7 +40,7 @@ function StatCard({ card }) {
   };
   const Icon = icons[card.icon] || TrendingUp;
 
-  const isInteractive = card.id === "active-auth";
+  const isInteractive = card.id === "active-auth" && !palmEnrolled;
 
   return (
     <div className={`bg-bg-card border border-border-main rounded-2xl p-6 shadow-sm relative overflow-hidden group transition-all hover:shadow-md ${isInteractive ? "cursor-pointer hover:border-accent-blue/40" : "cursor-default"}`}>
@@ -72,7 +72,10 @@ function StatCard({ card }) {
             <div className="flex justify-between items-center mt-1.5 ">
                <span className="text-[11px] text-text-secondary font-medium">{card.sub}</span>
                {isInteractive && (
-                 <span className="text-[10px] text-accent-blue font-bold tracking-tight opacity-0 group-hover:opacity-100 transition-opacity">Tap to Scan</span>
+                 <span className="text-[10px] text-accent-blue font-bold tracking-tight whitespace-nowrap ml-2 animate-pulse">Set Up</span>
+               )}
+               {!isInteractive && card.id === "active-auth" && (
+                 <span className="text-[10px] text-accent-green font-bold tracking-tight opacity-80 ml-2">Verified</span>
                )}
             </div>
           </div>
@@ -139,9 +142,13 @@ export default function Dashboard() {
     stats[0].chartData = chartData.week;
   }
 
-  // Security stat card: always clickable — enroll or re-enroll
+  // Security stat card: navigate to settings if not verified
   const handleCardClick = (id) => {
-    if (id === "active-auth") setIsScannerOpen(true);
+    if (id === "active-auth") {
+      if (!palmEnrolled) {
+        navigate("/security");
+      }
+    }
   };
 
   return (
@@ -150,7 +157,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((card) => (
           <div key={card.id} onClick={() => handleCardClick(card.id)}>
-            <StatCard card={card} />
+            <StatCard card={card} palmEnrolled={palmEnrolled} />
           </div>
         ))}
       </div>

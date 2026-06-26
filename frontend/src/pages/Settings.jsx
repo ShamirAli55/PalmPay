@@ -5,11 +5,12 @@ import {
   User, Bell, Shield, CreditCard,
   ChevronRight, Camera, Moon, Sun,
   Fingerprint, Lock,
-  Scan, Loader2, LogOut, ShieldCheck, ShieldOff
+  Scan, Loader2, LogOut, ShieldCheck, ShieldOff, Phone, Check
 } from "lucide-react";
 import { useWalletStore } from "../store/walletStore";
 import { usePalmStore } from "../store/palmStore";
 import PalmScanner from "../components/ui/PalmScanner";
+import PhoneLinkModal, { normalizePhone } from "../components/ui/PhoneLinkModal";
 
 const TABS = ["General", "Security"];
 
@@ -177,10 +178,11 @@ export default function Settings() {
   const { isDark, toggleTheme, user: dbUser, fetchData, updateProfile } = useWalletStore();
   const { fetchPalmStatus } = usePalmStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [saved, setSaved] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [saved, setSaved]       = useState(false);
+  const [phone, setPhone]       = useState("");
   const [username, setUsername] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName]         = useState("");
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
 
   useEffect(() => {
     if (clerkUser?.id) {
@@ -190,7 +192,13 @@ export default function Settings() {
   }, [clerkUser?.id]);
 
   useEffect(() => {
-    if (dbUser?.phone) setPhone(dbUser.phone);
+    if (dbUser?.phone) {
+      setPhone(dbUser.phone);
+    } else if (clerkUser?.primaryPhoneNumber?.phoneNumber) {
+      // Sync from Clerk if DB doesn't have it yet
+      setPhone(clerkUser.primaryPhoneNumber.phoneNumber);
+    }
+    
     if (dbUser?.username) setUsername(dbUser.username);
     if (dbUser?.name) setName(dbUser.name);
     else if (clerkUser?.fullName) setName(clerkUser.fullName);
@@ -201,8 +209,7 @@ export default function Settings() {
 
   const handleSave = async () => {
     if (clerkUser?.id) {
-      // Normalize phone: strip spaces and dashes, allow + if first char
-      const normalizedPhone = phone.replace(/[\s-]/g, '');
+      const normalizedPhone    = normalizePhone(phone);
       const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
 
       const success = await updateProfile(clerkUser.id, {
@@ -210,15 +217,13 @@ export default function Settings() {
         username: normalizedUsername,
         name: name.trim()
       });
-      if (success) {
-        window.location.reload();
-      }
+      if (success) window.location.reload();
     }
   };
 
   const hasChanges = 
     name.trim() !== (dbUser?.name || clerkUser?.fullName || "") ||
-    phone.replace(/[\s-]/g, '') !== (dbUser?.phone || "") ||
+    normalizePhone(phone) !== normalizePhone(dbUser?.phone || "") ||
     username.toLowerCase().replace(/[^a-z0-9]/g, '') !== (dbUser?.username || "");
 
   return (
@@ -298,15 +303,34 @@ export default function Settings() {
                 <div className="sm:col-span-2">
                   <div className="text-[11px] text-text-secondary font-bold uppercase tracking-[0.15em] mb-3 font-heading flex items-center gap-2">
                     Mobile Number
-                    <span className="text-[9px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md font-black">Used for transfers</span>
+                    <span className="text-[9px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded-md font-black">Verified via SMS</span>
                   </div>
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+92 300 1234567"
-                    className="w-full bg-text-primary/5 border border-border-main rounded-xl px-5 py-4 text-text-primary text-[14px] font-medium outline-none focus:border-accent-blue/50 transition-all shadow-inner"
-                  />
-                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-60">Number will be normalized (spaces and dashes removed) for security.</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 flex items-center gap-3 bg-text-primary/5 border border-border-main rounded-xl px-5 py-3.5">
+                      {dbUser?.phone ? (
+                        <>
+                          <Check size={14} className="text-accent-green shrink-0" />
+                          <span className="text-[14px] font-mono text-text-primary font-medium">
+                            {dbUser.phone}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Phone size={14} className="text-text-secondary/40 shrink-0" />
+                          <span className="text-[13px] text-text-secondary opacity-40 font-medium">No phone linked</span>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setPhoneModalOpen(true)}
+                      className="shrink-0 px-4 py-3.5 bg-text-primary/5 border border-border-main rounded-xl text-[11px] font-bold text-accent-blue hover:border-accent-blue/30 hover:bg-accent-blue/5 transition-all uppercase tracking-widest"
+                    >
+                      {dbUser?.phone ? "Change" : "Link Now"}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-secondary mt-2.5 font-medium opacity-50">
+                    Verified Identity — used for instant transfers and recipient search within PalmPay.
+                  </p>
                 </div>
               </div>
             </SectionCard>
@@ -338,6 +362,19 @@ export default function Settings() {
         </div>
       ) : (
         <SecurityTab />
+      )}
+
+      {/* Phone Link / Change Modal */}
+      {phoneModalOpen && (
+        <PhoneLinkModal
+          isOpen={phoneModalOpen}
+          onClose={() => setPhoneModalOpen(false)}
+          title={dbUser?.phone ? "Update Phone Number" : "Link Phone Number"}
+          onSuccess={(newPhone) => {
+            setPhone(newPhone);
+            setPhoneModalOpen(false);
+          }}
+        />
       )}
     </div>
   );

@@ -287,8 +287,8 @@ export const useWalletStore = create((set, get) => ({
       {
         id: "active-auth",
         label: "SECURITY",
-        value: !isSecure ? "RE-AUTH" : (get().palmEnrolled ? "READY" : "ACTION"),
-        sub: !isSecure ? "Session Error" : (get().palmEnrolled ? "Palm Verified" : "Setup Required"),
+        value: !isSecure ? "RE-AUTH" : (get().palmEnrolled ? "VERIFIED" : "UNVERIFIED"),
+        sub: !isSecure ? "Session Error" : (get().palmEnrolled ? "Biometric Active" : "Action Required"),
         icon: "target",
         showProgress: true,
         progress: (isSecure && get().palmEnrolled) ? 100 : 0

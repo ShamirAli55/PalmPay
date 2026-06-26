@@ -165,13 +165,27 @@ exports.updateProfile = async (req, res) => {
 
         await user.save();
 
-        // Notification for profile update
+        // ─── Dynamic Notification Logic ───────────────────────────────────────
         try {
             const Notification = require('../models/Notification');
+            let title = 'Profile Updated';
+            let message = 'Your account details have been successfully synchronized.';
+
+            if (phone && !username) {
+                title   = 'Phone Linked';
+                message = `Your mobile number ${phone} is now securely linked to your PalmPay identity.`;
+            } else if (username && !phone) {
+                title   = 'Palm ID Updated';
+                message = `Your unique Palm ID has been set to @${user.username}.`;
+            } else if (username && phone) {
+                title   = 'Identity Finalized';
+                message = `Your Palm ID @${user.username} and phone number are now fully synchronized.`;
+            }
+
             await new Notification({
                 userId: clerkId,
-                title: 'Identity Updated',
-                message: `Your Palm ID was successfully updated to @${user.username || 'unassigned'}.`,
+                title,
+                message,
                 type: 'system'
             }).save();
         } catch (nErr) {

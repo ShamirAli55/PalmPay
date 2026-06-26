@@ -5,6 +5,7 @@ import { Shield, ChevronRight, Plus, ScanLine, Wallet, Loader2, ArrowLeft } from
 import { useWalletStore } from "../store/walletStore";
 import PalmScanner from "../components/ui/PalmScanner";
 import QRScannerModal from "../components/ui/QRScannerModal";
+import { normalizePhone } from "../components/ui/PhoneLinkModal";
 
 const QUICK_AMOUNTS = [200, 500, 1000, 5000];
 
@@ -39,7 +40,6 @@ export default function Send() {
   const [searchQuery, setSearchQuery] = useState("");
   const [foundUser, setFoundUser] = useState(null);
 
-  const normalizePhone = (p) => p ? p.replace(/\D/g, '') : '';
 
   useEffect(() => {
     if ((users || []).length > 0 && !selectedContact && !success) {
