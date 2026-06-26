@@ -153,42 +153,42 @@ export default function Send() {
               {/* ── Selection Display (Overrides Search when Recipient chosen) ──────────────── */}
               {selectedContact || selectedBank ? (
                 <div className="space-y-4">
-                   <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
-                      Selected Recipient
-                   </div>
-                   {selectedContact ? (
-                     (() => {
-                        const u = users.find(user => user.clerkId === selectedContact);
-                        const tag = u?.username ? `@${u.username}` : `@${u?.name?.split(' ')[0].toLowerCase() || 'user'}`;
-                        return (
-                          <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-2xl p-5 flex items-center gap-5 animate-in zoom-in-95 duration-300">
-                             <div className="w-14 h-14 rounded-full bg-accent-blue/20 flex items-center justify-center text-lg font-bold text-accent-blue shrink-0 shadow-lg shadow-accent-blue/5">
-                                {getInitials(u?.name)}
-                             </div>
-                             <div className="flex-1 min-w-0">
-                                <div className="text-[16px] font-black text-text-primary truncate font-heading">{u?.name || "Palm User"}</div>
-                                <div className="text-[11px] text-accent-blue font-bold uppercase tracking-widest opacity-80 truncate">{tag}</div>
-                             </div>
-                             <button onClick={() => { setSelectedContact(null); setFoundUser(null); setSearchQuery(""); }} className="text-[11px] font-black text-text-secondary hover:text-accent-red uppercase tracking-tighter transition-all px-3 py-2 border border-text-primary/5 rounded-xl">
-                                CHANGE
-                             </button>
+                  <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+                    Selected Recipient
+                  </div>
+                  {selectedContact ? (
+                    (() => {
+                      const u = users.find(user => user.clerkId === selectedContact);
+                      const tag = u?.username ? `@${u.username}` : `@${u?.name?.split(' ')[0].toLowerCase() || 'user'}`;
+                      return (
+                        <div className="bg-accent-blue/5 border border-accent-blue/20 rounded-2xl p-5 flex items-center gap-5 animate-in zoom-in-95 duration-300">
+                          <div className="w-14 h-14 rounded-full bg-accent-blue/20 flex items-center justify-center text-lg font-bold text-accent-blue shrink-0 shadow-lg shadow-accent-blue/5">
+                            {getInitials(u?.name)}
                           </div>
-                        );
-                     })()
-                   ) : (
-                      <div className="bg-accent-green/5 border border-accent-green/20 rounded-2xl p-5 flex items-center gap-5 relative overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="w-14 h-14 rounded-2xl bg-accent-green flex items-center justify-center text-white text-xl font-black shadow-xl shadow-accent-green/20 shrink-0">
-                          {linkedBanks.find(b => b.id === selectedBank)?.name[0].toUpperCase()}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[16px] font-black text-text-primary truncate font-heading">{u?.name || "Palm User"}</div>
+                            <div className="text-[11px] text-accent-blue font-bold uppercase tracking-widest opacity-80 truncate">{tag}</div>
+                          </div>
+                          <button onClick={() => { setSelectedContact(null); setFoundUser(null); setSearchQuery(""); }} className="text-[11px] font-black text-text-secondary hover:text-accent-red uppercase tracking-tighter transition-all px-3 py-2 border border-text-primary/5 rounded-xl">
+                            CHANGE
+                          </button>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[16px] font-black text-text-primary truncate font-heading">{linkedBanks.find(b => b.id === selectedBank)?.name}</div>
-                          <p className="text-[11px] text-text-secondary mt-1 font-bold uppercase tracking-widest opacity-60 italic">••• {linkedBanks.find(b => b.id === selectedBank)?.last4}</p>
-                        </div>
-                        <button onClick={() => setSelectedBank(null)} className="text-[11px] font-black text-text-secondary hover:text-accent-red uppercase tracking-tighter transition-all px-3 py-2 border border-text-primary/5 rounded-xl">
-                          CHANGE
-                        </button>
+                      );
+                    })()
+                  ) : (
+                    <div className="bg-accent-green/5 border border-accent-green/20 rounded-2xl p-5 flex items-center gap-5 relative overflow-hidden animate-in zoom-in-95 duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-accent-green flex items-center justify-center text-white text-xl font-black shadow-xl shadow-accent-green/20 shrink-0">
+                        {linkedBanks.find(b => b.id === selectedBank)?.name[0].toUpperCase()}
                       </div>
-                   )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[16px] font-black text-text-primary truncate font-heading">{linkedBanks.find(b => b.id === selectedBank)?.name}</div>
+                        <p className="text-[11px] text-text-secondary mt-1 font-bold uppercase tracking-widest opacity-60 italic">••• {linkedBanks.find(b => b.id === selectedBank)?.last4}</p>
+                      </div>
+                      <button onClick={() => setSelectedBank(null)} className="text-[11px] font-black text-text-secondary hover:text-accent-red uppercase tracking-tighter transition-all px-3 py-2 border border-text-primary/5 rounded-xl">
+                        CHANGE
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-7">
@@ -217,9 +217,9 @@ export default function Send() {
                           const cleanVal = val.toLowerCase().replace('@', '');
                           const normalizedInput = normalizePhone(cleanVal);
                           const found = (users || []).find(
-                            u => (u.phone && normalizePhone(u.phone) === normalizedInput) || 
-                                 u.clerkId === cleanVal || 
-                                 (u.username && u.username.toLowerCase().includes(cleanVal))
+                            u => (u.phone && normalizePhone(u.phone) === normalizedInput) ||
+                              u.clerkId === cleanVal ||
+                              (u.username && u.username.toLowerCase().includes(cleanVal))
                           );
                           setFoundUser(found && val.length > 0 ? found : null);
                         }}
@@ -230,106 +230,106 @@ export default function Send() {
 
                   {/* 2. Found Recipient (Only show if searchQuery has match) */}
                   {foundUser && (
-                     <div className="space-y-3 animate-in slide-in-from-top-2 duration-500">
-                        <div className="text-[10px] font-bold text-accent-blue uppercase tracking-[0.2em] font-heading">
-                           Match Found
+                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-500">
+                      <div className="text-[10px] font-bold text-accent-blue uppercase tracking-[0.2em] font-heading">
+                        Match Found
+                      </div>
+                      <button
+                        onClick={() => setSelectedContact(foundUser.clerkId)}
+                        className="w-full bg-accent-blue/5 border-2 border-accent-blue/30 rounded-2xl p-4 flex items-center gap-4 hover:bg-accent-blue/10 transition-all ring-4 ring-accent-blue/5"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-accent-blue/20 flex items-center justify-center text-sm font-bold text-accent-blue shrink-0">
+                          {getInitials(foundUser.name)}
                         </div>
-                        <button 
-                           onClick={() => setSelectedContact(foundUser.clerkId)}
-                           className="w-full bg-accent-blue/5 border-2 border-accent-blue/30 rounded-2xl p-4 flex items-center gap-4 hover:bg-accent-blue/10 transition-all ring-4 ring-accent-blue/5"
-                        >
-                           <div className="w-12 h-12 rounded-full bg-accent-blue/20 flex items-center justify-center text-sm font-bold text-accent-blue shrink-0">
-                              {getInitials(foundUser.name)}
-                           </div>
-                           <div className="text-left flex-1 min-w-0">
-                              <div className="text-[14px] font-black text-text-primary truncate">{foundUser.name}</div>
-                              <div className="text-[10px] text-accent-blue font-bold uppercase tracking-widest opacity-80">@{foundUser.username || 'user'}</div>
-                           </div>
-                           <div className="text-[9px] font-black text-white bg-accent-blue px-3 py-1.5 rounded-lg uppercase tracking-tight">Select</div>
-                        </button>
-                     </div>
+                        <div className="text-left flex-1 min-w-0">
+                          <div className="text-[14px] font-black text-text-primary truncate">{foundUser.name}</div>
+                          <div className="text-[10px] text-accent-blue font-bold uppercase tracking-widest opacity-80">@{foundUser.username || 'user'}</div>
+                        </div>
+                        <div className="text-[9px] font-black text-white bg-accent-blue px-3 py-1.5 rounded-lg uppercase tracking-tight">Select</div>
+                      </button>
+                    </div>
                   )}
 
                   {/* 3. Recent Transactions (Dynamic List) */}
                   {!foundUser && (
                     <div className="space-y-4 pt-2">
-                       <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
-                          Recent Recipients
-                       </div>
-                       
-                       {(() => {
-                          // Get unique recipient IDs from debit transactions
-                          const recentIds = [...new Set((transactions || [])
-                            .filter(t => t.type === 'debit' && t.recipientId)
-                            .map(t => t.recipientId))];
-                          
-                          // Match IDs with user objects
-                          const recentUsers = (users || []).filter(u => recentIds.includes(u.clerkId));
+                      <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+                        Recent Recipients
+                      </div>
 
-                          if (recentUsers.length === 0) {
-                            return (
-                              <div className="py-6 px-4 border-2 border-dashed border-text-primary/5 rounded-2xl text-center bg-text-primary/[0.02] animate-in fade-in duration-700">
-                                <div className="text-[10px] text-text-secondary font-bold uppercase tracking-[0.2em] opacity-30">
-                                  No transaction history found
-                                </div>
-                              </div>
-                            );
-                          }
+                      {(() => {
+                        // Get unique recipient IDs from debit transactions
+                        const recentIds = [...new Set((transactions || [])
+                          .filter(t => t.type === 'debit' && t.recipientId)
+                          .map(t => t.recipientId))];
 
+                        // Match IDs with user objects
+                        const recentUsers = (users || []).filter(u => recentIds.includes(u.clerkId));
+
+                        if (recentUsers.length === 0) {
                           return (
-                            <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar animate-in slide-in-from-right-4 duration-500">
-                              {recentUsers.slice(0, 8).map((u) => (
-                                <button
-                                    key={u.clerkId}
-                                    onClick={() => setSelectedContact(u.clerkId)}
-                                    className="flex flex-col items-center gap-2 bg-text-primary/5 border border-border-main/40 p-3 rounded-2xl hover:bg-text-primary/10 hover:border-accent-blue/30 transition-all shrink-0 active:scale-95 min-w-[90px] group/item"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-accent-blue/10 flex items-center justify-center text-[12px] font-bold text-accent-blue shrink-0 shadow-inner group-hover/item:bg-accent-blue group-hover/item:text-white transition-all">
-                                      {getInitials(u.name)}
-                                    </div>
-                                    <div className="text-center">
-                                      <div className="text-[10px] font-bold text-text-primary uppercase tracking-tight truncate max-w-[80px]">
-                                          {u.name?.split(" ")[0] || "User"}
-                                      </div>
-                                      <div className="text-[8px] font-black text-accent-blue/50 uppercase truncate max-w-[80px] opacity-70">
-                                          @{u.username || 'user'}
-                                      </div>
-                                    </div>
-                                </button>
-                              ))}
+                            <div className="py-6 px-4 border-2 border-dashed border-text-primary/5 rounded-2xl text-center bg-text-primary/[0.02] animate-in fade-in duration-700">
+                              <div className="text-[10px] text-text-secondary font-bold uppercase tracking-[0.2em] opacity-30">
+                                No transaction history found
+                              </div>
                             </div>
                           );
-                       })()}
+                        }
+
+                        return (
+                          <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar animate-in slide-in-from-right-4 duration-500">
+                            {recentUsers.slice(0, 8).map((u) => (
+                              <button
+                                key={u.clerkId}
+                                onClick={() => setSelectedContact(u.clerkId)}
+                                className="flex flex-col items-center gap-2 bg-text-primary/5 border border-border-main/40 p-3 rounded-2xl hover:bg-text-primary/10 hover:border-accent-blue/30 transition-all shrink-0 active:scale-95 min-w-[90px] group/item"
+                              >
+                                <div className="w-10 h-10 rounded-full bg-accent-blue/10 flex items-center justify-center text-[12px] font-bold text-accent-blue shrink-0 shadow-inner group-hover/item:bg-accent-blue group-hover/item:text-white transition-all">
+                                  {getInitials(u.name)}
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-[10px] font-bold text-text-primary uppercase tracking-tight truncate max-w-[80px]">
+                                    {u.name?.split(" ")[0] || "User"}
+                                  </div>
+                                  <div className="text-[8px] font-black text-accent-blue/50 uppercase truncate max-w-[80px] opacity-70">
+                                    @{u.username || 'user'}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
                   {/* 4. Linked Accounts */}
                   {!foundUser && linkedBanks.length > 0 && (
-                     <div className="space-y-3 pt-4 border-t border-white/5">
-                        <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
-                           Withdraw to Bank
-                        </div>
-                        <div className="grid grid-cols-1 gap-2.5">
-                           {linkedBanks.map((bank) => (
-                              <button
-                                 key={bank.id}
-                                 onClick={() => setSelectedBank(bank.id)}
-                                 className="bg-text-primary/5 border border-border-main rounded-2xl p-4 flex items-center justify-between hover:border-accent-blue/30 hover:bg-text-primary/10 transition-all active:scale-[0.98] group"
-                              >
-                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-[12px] bg-bg-card border border-border-main flex items-center justify-center text-text-secondary group-hover:text-accent-blue group-hover:border-accent-blue/20 transition-all">
-                                       <Wallet size={18} />
-                                    </div>
-                                    <div className="text-left">
-                                       <div className="text-[13px] font-black text-text-primary uppercase tracking-tight">{bank.name}</div>
-                                       <div className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40">••• {bank.last4}</div>
-                                    </div>
-                                 </div>
-                                 <ChevronRight size={14} className="text-text-secondary group-hover:text-accent-blue transition-all" />
-                              </button>
-                           ))}
-                        </div>
-                     </div>
+                    <div className="space-y-3 pt-4 border-t border-white/5">
+                      <div className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-heading">
+                        Withdraw to Bank
+                      </div>
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {linkedBanks.map((bank) => (
+                          <button
+                            key={bank.id}
+                            onClick={() => setSelectedBank(bank.id)}
+                            className="bg-text-primary/5 border border-border-main rounded-2xl p-4 flex items-center justify-between hover:border-accent-blue/30 hover:bg-text-primary/10 transition-all active:scale-[0.98] group"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-[12px] bg-bg-card border border-border-main flex items-center justify-center text-text-secondary group-hover:text-accent-blue group-hover:border-accent-blue/20 transition-all">
+                                <Wallet size={18} />
+                              </div>
+                              <div className="text-left">
+                                <div className="text-[13px] font-black text-text-primary uppercase tracking-tight">{bank.name}</div>
+                                <div className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40">••• {bank.last4}</div>
+                              </div>
+                            </div>
+                            <ChevronRight size={14} className="text-text-secondary group-hover:text-accent-blue transition-all" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

@@ -24,8 +24,8 @@ const PAGE_SIZE = 5;
 
 const STATUS_MAP = {
   Processed: { text: "text-accent-green", bg: "bg-accent-green/10", dot: "bg-accent-green" },
-  Pending:   { text: "text-amber-500", bg: "bg-amber-500/10", dot: "bg-amber-500" },
-  Failed:    { text: "text-accent-red", bg: "bg-accent-red/10", dot: "bg-accent-red" },
+  Pending: { text: "text-amber-500", bg: "bg-amber-500/10", dot: "bg-amber-500" },
+  Failed: { text: "text-accent-red", bg: "bg-accent-red/10", dot: "bg-accent-red" },
 };
 
 const CAT_ICONS = {
@@ -39,7 +39,7 @@ const CAT_ICONS = {
 function Avatar({ name, color }) {
   const initials = (name || "U").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div 
+    <div
       className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 border border-border-main"
       style={{ backgroundColor: color || "var(--accent-blue)" }}
     >
@@ -52,13 +52,15 @@ const AVATAR_COLORS = ["var(--accent-blue)", "var(--accent-green)", "#f97316", "
 
 export default function Transactions() {
   const { user } = useUser();
-  const { transactions, fetchData } = useWalletStore();
+  const { transactions, fetchData, categories } = useWalletStore();
   const [category, setCategory] = useState("All Categories");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (user) fetchData(user.id);
   }, [user, fetchData]);
+
+  const displayCategories = ["All Categories", ...(categories || [])];
 
   const filtered = category === "All Categories"
     ? transactions
@@ -78,55 +80,57 @@ export default function Transactions() {
 
   const handleExport = (type) => {
     if (type !== "PDF") return;
-    
+
     const id = toast.loading("Generating your statement…");
 
     try {
-        const doc = new jsPDF();
-        const tableColumn = ["Recipient", "Category", "Date", "Status", "Amount"];
-        const tableRows = [];
+      const doc = new jsPDF();
+      const tableColumn = ["Recipient", "Category", "Date", "Status", "Amount"];
+      const tableRows = [];
 
-        filtered.forEach(txn => {
+      filtered.forEach(txn => {
         const txnData = [
-            txn.recipient || "Incoming",
-            txn.category || "Transfer",
-            formatTxnDate(txn.date),
-            txn.status,
-            `Rs. ${Math.abs(txn.amount).toLocaleString()}`
+          txn.recipient || "Incoming",
+          txn.category || "Transfer",
+          formatTxnDate(txn.date),
+          txn.status,
+          `Rs. ${Math.abs(txn.amount).toLocaleString()}`
         ];
         tableRows.push(txnData);
-        });
+      });
 
-        // Styling
-        doc.setFontSize(22);
-        doc.setTextColor(29, 78, 216); // Brand Blue
-        doc.text("PalmPay Financial Statement", 14, 22);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Generated for: ${user?.fullName || "Valued User"}`, 14, 30);
-        doc.text(`Total Transactions: ${filtered.length}`, 14, 35);
-        doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 14, 40);
+      // Styling
+      doc.setFontSize(22);
+      doc.setTextColor(29, 78, 216); // Brand Blue
+      doc.text("PalmPay Financial Statement", 14, 22);
 
-        autoTable(doc, {
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated for: ${user?.fullName || "Valued User"}`, 14, 30);
+      doc.text(`Total Transactions: ${filtered.length}`, 14, 35);
+      doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 14, 40);
+
+      autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
         startY: 50,
         theme: 'grid',
         headStyles: { fillColor: [29, 78, 216], textColor: [255, 255, 255] },
         margin: { top: 50 },
-        });
+      });
 
-        doc.save(`PalmPay_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
-        toast.success("Statement downloaded successfully!", { id });
+      doc.save(`PalmPay_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Statement downloaded successfully!", { id });
     } catch (error) {
-        console.error("PDF Export Error:", error);
-        toast.error("Failed to generate PDF. Please try again.", { id });
+      console.error("PDF Export Error:", error);
+      toast.error("Failed to generate PDF. Please try again.", { id });
     }
   };
 
   const [showAllContacts, setShowAllContacts] = useState(false);
   const uniqueContacts = [...new Set(transactions.map(t => t.recipient).filter(Boolean))];
+
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-6 p-0 lg:p-1.5 min-h-screen">
@@ -148,32 +152,59 @@ export default function Transactions() {
 
       {/* Filters & Contacts */}
       <div className="bg-bg-card border border-border-main rounded-xl p-4 flex flex-col lg:flex-row items-center gap-6 shadow-sm">
-        {/* Category filter */}
-        <div className="relative w-full lg:w-48">
-          <select
-            value={category}
-            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-            className="w-full appearance-none bg-text-primary/5 border border-border-main rounded-xl py-3 pl-4 pr-10 text-[12px] text-text-primary font-bold outline-none focus:border-accent-blue/50 cursor-pointer font-heading"
+        {/* Custom Category Dropdown with overflow-y scroll */}
+        <div className="relative w-full lg:w-56">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-full bg-text-primary/5 border border-border-main rounded-lg py-3 pl-5 pr-10 text-[12px] text-text-primary font-bold outline-none flex items-center justify-between hover:bg-text-primary/10 transition-all cursor-pointer font-heading text-left"
           >
-            {CATEGORIES.map((c) => <option key={c} value={c} className="bg-bg-card">{c}</option>)}
-          </select>
-          <ChevronDown
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none w-4 h-4 text-text-secondary"
-          />
+            <span className="truncate uppercase tracking-wider">{category}</span>
+            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {isOpen && (
+            <>
+              {/* Overlay for closing */}
+              <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+              
+              {/* Dropdown List */}
+              <div className="absolute top-full left-0 right-0 mt-2 bg-bg-card border border-border-main rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="max-h-60 overflow-y-auto no-scrollbar py-2">
+                  {displayCategories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setCategory(c);
+                        setPage(1);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition-all font-heading ${
+                        category === c 
+                          ? "bg-accent-blue text-white" 
+                          : "text-text-secondary hover:bg-text-primary/5 hover:text-text-primary"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Dynamic Expandable Recent Contacts */}
         {uniqueContacts.length > 0 && (
           <div className="flex items-center gap-4 w-full lg:w-auto lg:ml-auto">
-             <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest shrink-0">Recent Contacts:</span>
+            <span className="text-[11px] text-text-secondary font-bold font-heading uppercase tracking-widest shrink-0">Recent Contacts:</span>
             <div className={`flex -space-x-2 overflow-x-auto no-scrollbar py-2 px-1 transition-all duration-500 ease-in-out ${showAllContacts ? "w-[240px] sm:w-[400px]" : "w-[150px]"}`}>
               {uniqueContacts.slice(0, showAllContacts ? undefined : 4).map((name, i) => {
                 const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
                 return (
-                  <div 
+                  <div
                     key={name}
                     title={name}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-bg-card shadow-sm cursor-pointer transition-all hover:scale-110 hover:z-10 shrink-0" 
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-bg-card shadow-sm cursor-pointer transition-all hover:scale-110 hover:z-10 shrink-0"
                     style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
                   >
                     {initials}
@@ -189,7 +220,7 @@ export default function Transactions() {
                 </button>
               )}
               {showAllContacts && (
-                <div 
+                <div
                   onClick={() => setShowAllContacts(false)}
                   className="sticky right-0 top-0 bottom-0 z-30 flex items-center pl-8 pr-2 bg-gradient-to-l from-bg-card via-bg-card to-transparent cursor-pointer group"
                 >
@@ -206,75 +237,74 @@ export default function Transactions() {
       {/* Table container */}
       <div className="bg-bg-card border border-border-main rounded-xl overflow-hidden shadow-sm overflow-x-auto no-scrollbar transition-all hover:shadow-md duration-300">
         <div className="min-w-[750px]">
-            <div className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-5 sm:px-6 py-4 border-b border-border-main bg-text-primary/2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-5 sm:px-6 py-4 border-b border-border-main bg-text-primary/2 gap-3 sm:gap-4">
             {["RECIPIENT", "CATEGORY", "DATE & TIME", "STATUS", "AMOUNT"].map((col, i) => (
-                <div 
-                  key={col} 
-                  className={`text-[10px] sm:text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading ${
-                    col === "STATUS" || col === "DATE & TIME" ? "justify-center text-center" : 
-                    col === "AMOUNT" ? "justify-end text-right" : 
+              <div
+                key={col}
+                className={`text-[10px] sm:text-[11px] font-bold text-text-secondary tracking-[0.2em] flex items-center gap-2 font-heading ${col === "STATUS" || col === "DATE & TIME" ? "justify-center text-center" :
+                  col === "AMOUNT" ? "justify-end text-right" :
                     "justify-start"
                   }`}
-                >
-                  {col}
-                </div>
+              >
+                {col}
+              </div>
             ))}
-            </div>
+          </div>
 
-            <div className="divide-y divide-border-main">
+          <div className="divide-y divide-border-main">
             {paginated.map((txn, idx) => {
-                const CatIcon = CAT_ICONS[txn.category] || CreditCard;
-                const isPositive = txn.amount > 0;
-                const sc = STATUS_MAP[txn.status] || STATUS_MAP.Processed;
+              const CatIcon = CAT_ICONS[txn.category] || CreditCard;
+              const isPositive = txn.amount > 0;
+              const sc = STATUS_MAP[txn.status] || STATUS_MAP.Processed;
 
-                return (
-                  <div
-                    key={txn._id || idx}
-                    className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-5 sm:px-6 py-4 sm:py-5 items-center gap-3 sm:gap-4 border-b border-border-main/50 hover:bg-text-primary/2 transition-all cursor-pointer group"
-                  >
-                    {/* Recipient */}
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 h-full">
-                      <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
-                      <div className="min-w-0">
-                        <div className="text-[13px] sm:text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
-                        <div className="text-[10px] sm:text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Transfer"}</div>
-                      </div>
-                    </div>
-
-                    {/* Category */}
-                    <div className="flex items-center h-full">
-                      <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-2.5 py-1.5 text-[9px] sm:text-[10px] text-text-secondary font-bold font-heading uppercase">
-                        <CatIcon size={11} className="shrink-0" /> <span className="truncate">{txn.category || "Transfer"}</span>
-                      </div>
-                    </div>
-
-                    {/* Date/Time */}
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <div className="text-[12px] sm:text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
-                        <div className="text-[10px] sm:text-[11px] text-text-secondary font-medium tracking-widest mt-1 uppercase whitespace-nowrap">{formatTxnTime(txn.date)}</div>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex items-center justify-center h-full">
-                      <div className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[9px] sm:text-[10px] font-bold font-heading uppercase tracking-wide ${sc.text} ${sc.bg}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} animate-pulse shrink-0`} />
-                        <span className="truncate">{txn.status}</span>
-                      </div>
-                    </div>
-
-                    {/* Amount */}
-                    <div className="flex items-center justify-end h-full">
-                      <div className={`text-[14px] sm:text-[16px] font-bold text-right font-heading tracking-tighter ${isPositive ? "text-accent-green" : "text-text-primary"}`}>
-                        {isPositive ? "+" : ""}
-                        Rs. {Math.abs(txn.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </div>
+              return (
+                <div
+                  key={txn._id || idx}
+                  className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr] px-5 sm:px-6 py-4 sm:py-5 items-center gap-3 sm:gap-4 border-b border-border-main/50 hover:bg-text-primary/2 transition-all cursor-pointer group"
+                >
+                  {/* Recipient */}
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 h-full">
+                    <Avatar name={txn.recipient || "User"} color={AVATAR_COLORS[idx % AVATAR_COLORS.length]} />
+                    <div className="min-w-0">
+                      <div className="text-[13px] sm:text-[14px] font-bold text-text-primary truncate font-heading group-hover:text-accent-blue transition-colors uppercase tracking-tight">{txn.recipient || "Incoming"}</div>
+                      <div className="text-[10px] sm:text-[11px] text-text-secondary truncate mt-0.5 font-medium">{txn.description || "Transfer"}</div>
                     </div>
                   </div>
-                );
+
+                  {/* Category */}
+                  <div className="flex items-center h-full">
+                    <div className="inline-flex items-center gap-2 bg-text-primary/5 border border-border-main rounded-lg px-2.5 py-1.5 text-[9px] sm:text-[10px] text-text-secondary font-bold font-heading uppercase">
+                      <CatIcon size={11} className="shrink-0" /> <span className="truncate">{txn.category || "Transfer"}</span>
+                    </div>
+                  </div>
+
+                  {/* Date/Time */}
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-[12px] sm:text-[13px] font-bold text-text-primary font-heading tracking-tight">{formatTxnDate(txn.date)}</div>
+                      <div className="text-[10px] sm:text-[11px] text-text-secondary font-medium tracking-widest mt-1 uppercase whitespace-nowrap">{formatTxnTime(txn.date)}</div>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center justify-center h-full">
+                    <div className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[9px] sm:text-[10px] font-bold font-heading uppercase tracking-wide ${sc.text} ${sc.bg}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} animate-pulse shrink-0`} />
+                      <span className="truncate">{txn.status}</span>
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="flex items-center justify-end h-full">
+                    <div className={`text-[14px] sm:text-[16px] font-bold text-right font-heading tracking-tighter ${isPositive ? "text-accent-green" : "text-text-primary"}`}>
+                      {isPositive ? "+" : ""}
+                      Rs. {Math.abs(txn.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+              );
             })}
-            </div>
+          </div>
         </div>
       </div>
 
@@ -283,7 +313,7 @@ export default function Transactions() {
         <span className="text-[12px] text-text-secondary font-bold font-heading">
           TRANSACTIONS: {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)} – {Math.min(page * PAGE_SIZE, filtered.length)} OF {filtered.length} RESULTS
         </span>
-        
+
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -351,5 +381,3 @@ export default function Transactions() {
     </div>
   );
 }
-
-

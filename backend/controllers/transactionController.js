@@ -1,9 +1,9 @@
-const axios       = require('axios');
-const formData    = require('form-data');
-const User        = require('../models/User');
-const Wallet      = require('../models/Wallet');
-const Transaction  = require('../models/Transaction');
-const BankAccount  = require('../models/BankAccount');
+const axios = require('axios');
+const formData = require('form-data');
+const User = require('../models/User');
+const Wallet = require('../models/Wallet');
+const Transaction = require('../models/Transaction');
+const BankAccount = require('../models/BankAccount');
 const Notification = require('../models/Notification');
 const { emitWalletBalanceUpdated } = require('../realtime/emitters/walletEmitter');
 const { emitTransactionCreated } = require('../realtime/emitters/transactionEmitter');
@@ -64,7 +64,7 @@ exports.createTransaction = async (req, res) => {
         // Use session in all finds/saves
         const senderWallet = await Wallet.findOne({ userId: clerkId }).session(session);
         const senderUser = await User.findOne({ clerkId }).session(session);
-        
+
         if (!senderWallet || !senderUser) throw new Error('Sender wallet or user not found');
         if (senderWallet.balance < amtNum) throw new Error('Insufficient balance');
 
@@ -162,7 +162,7 @@ exports.createTransaction = async (req, res) => {
                 // For receiver, the transaction object should be their view (credit)
                 const txIn = await Transaction.findOne({ userId: recipientId, reference: txOut.reference });
                 if (txIn) emitTransactionCreated({ clerkId: recipientId, transaction: txIn });
-                
+
                 emitNotificationNew({ clerkId: recipientId, notification: notifReceiver });
                 getUnreadCount(recipientId).then(count => emitUnreadCountUpdated({ clerkId: recipientId, unreadCount: count }));
             }
@@ -170,19 +170,19 @@ exports.createTransaction = async (req, res) => {
             console.error('Async Notification/Realtime Error:', notifErr);
         }
 
-        res.json({ 
-            message: 'Transaction successful', 
-            transaction: txOut, 
-            balance: senderWallet.balance 
+        res.json({
+            message: 'Transaction successful',
+            transaction: txOut,
+            balance: senderWallet.balance
         });
 
     } catch (err) {
         console.error('createTransaction transaction failed, rolling back:', err);
         await session.abortTransaction();
         session.endSession();
-        res.status(500).json({ 
-            error: 'Transaction failed', 
-            message: err.message === 'Insufficient balance' ? 'Insufficient balance' : 'Security or connection error' 
+        res.status(500).json({
+            error: 'Transaction failed',
+            message: err.message === 'Insufficient balance' ? 'Insufficient balance' : 'Security or connection error'
         });
     }
 };
@@ -256,15 +256,32 @@ exports.addFunds = async (req, res) => {
             transaction: tx,
             balance: wallet.balance,
             linkedBanks: banks.map(b => ({
-                id:      b._id,
-                bankId:  b._id,
-                name:    b.bankName,
-                last4:   b.accountNumberMasked.split(' ').pop(),
+                id: b._id,
+                bankId: b._id,
+                name: b.bankName,
+                last4: b.accountNumberMasked.split(' ').pop(),
                 balance: b.balance,
             })),
         });
     } catch (err) {
         console.error('addFunds error:', err);
         res.status(500).json({ error: 'Deposit failed' });
+    }
+};
+
+// ─── GET /api/transactions/categories/:clerkId ──────────────────────────────
+exports.getCategories = async (req, res) => {
+    try {
+        const { clerkId } = req.params;
+        // Find unique categories for this user. 
+        // We include a default set to ensure the UI has something if no transactions exist.
+        const defaultCategories = ["Transfer", "Shopping", "Income", "Software", "Technology", "Salary", "Utils", "Food", "Deposit"];
+        const userCategories = await Transaction.distinct('category', { userId: clerkId });
+        
+        // Merge and remove duplicates, filter out falsy values
+        const merged = [...new Set([...defaultCategories, ...userCategories])].filter(Boolean);
+        res.json(merged);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 };

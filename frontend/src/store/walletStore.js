@@ -16,6 +16,7 @@ export const useWalletStore = create((set, get) => ({
   palmEnrolled: false,
   users: [],
   user: null,
+  categories: ["Transfer", "Shopping", "Income", "Software", "Technology"],
 
   setSecure: (status) => set({ isSecure: status }),
 
@@ -29,15 +30,25 @@ export const useWalletStore = create((set, get) => ({
     }
   },
 
+  fetchCategories: async (clerkId) => {
+    try {
+      const res = await api.get(`/transactions/categories/${clerkId}`);
+      set({ categories: res.data || [] });
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  },
+
   // Sync
   fetchData: async (clerkId, name) => {
     if (!clerkId || get().loading) return;
     set({ loading: true });
     try {
-      const [userRes, transRes, notifsRes] = await Promise.all([
+      const [userRes, transRes, notifsRes, catRes] = await Promise.all([
         api.get(`/users/${clerkId}?name=${encodeURIComponent(name || '')}`),
         api.get(`/transactions/${clerkId}`),
-        api.get(`/notifications/${clerkId}`)
+        api.get(`/notifications/${clerkId}`),
+        api.get(`/transactions/categories/${clerkId}`)
       ]);
 
       set({
@@ -49,6 +60,7 @@ export const useWalletStore = create((set, get) => ({
         palmEnrolled: userRes.data.palmEnrolled || false,
         transactions: transRes.data || [],
         notifications: notifsRes.data || [],
+        categories: catRes.data || ["Transfer", "Shopping", "Income", "Software", "Technology"],
         loading: false
       });
     } catch (err) {
@@ -159,7 +171,7 @@ export const useWalletStore = create((set, get) => ({
     const { transactions } = get();
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    
+
     // Week data (last 7 days)
     const week = days.map((day, i) => {
       const daySpend = Math.abs(transactions.filter(t => {
@@ -301,7 +313,7 @@ export const useWalletStore = create((set, get) => ({
     set((state) => ({
       balance: event.balance,
       // If balance is linked to specific card models, update them too
-      cards: state.cards.map(card => ({ ...card, balance: event.balance })) 
+      cards: state.cards.map(card => ({ ...card, balance: event.balance }))
     }));
   },
 
@@ -326,7 +338,7 @@ export const useWalletStore = create((set, get) => ({
 
   applyNotificationReadUpdatedEvent: (event) => {
     set((state) => ({
-      notifications: state.notifications.map(n => 
+      notifications: state.notifications.map(n =>
         n._id === event.notificationId ? { ...n, isRead: event.isRead } : n
       )
     }));
